@@ -1,405 +1,751 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SafeScan - Gluten & Cosmetic Watchlist Scanner</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0B3D2E">
+  <title>CleanScan - Gluten & Toxin Label Scanner</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
-      --primary: #1b5e20;
-      --primary-light: #2e7d32;
-      --danger: #c62828;
-      --danger-light: #ffebee;
-      --warning: #ef6c00;
-      --warning-light: #fff3e0;
-      --success: #2e7d32;
-      --success-light: #e8f5e9;
-      --bg: #f4f6f8;
-      --card-bg: #ffffff;
-      --text: #212121;
-      --text-muted: #666666;
-      --border: #e0e0e0;
-      --radius: 12px;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --ink: #10201A;
+      --mute: #4D5F57;
+      --bg: #FFFFFF;
+      --panel: #F1F5F2;
+      --line: #C9D6CF;
+      --brand: #0B3D2E;
+      --lime: #C8F169;
+      --g: #0F7B3F;
+      --gbg: #DDF4E4;
+      --y: #8A5A00;
+      --ybg: #FFEFC2;
+      --r: #B3261E;
+      --rbg: #FDE0DD;
+      color-scheme: light;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); line-height: 1.5; padding-bottom: 40px; }
-    header { background: linear-gradient(135deg, #1b5e20, #2e7d32); color: white; text-align: center; padding: 24px 16px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); }
-    header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    header p { font-size: 0.9rem; opacity: 0.92; }
-    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
-    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); }
-    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; color: #333; display: flex; align-items: center; justify-content: space-between; }
-    #reader-container { position: relative; border-radius: var(--radius); overflow: hidden; background: #111; margin-bottom: 12px; }
-    #reader { width: 100%; min-height: 220px; }
-    .btn { width: 100%; padding: 12px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: background-color 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-primary { background: var(--primary-light); color: white; }
-    .btn-primary:hover { background: var(--primary); }
-    .btn-secondary { background: #757575; color: white; }
-    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { background: #f0f0f0; }
-    .btn-sm { padding: 6px 12px; font-size: 0.8rem; width: auto; }
-    .search-form { display: flex; gap: 8px; }
-    .input-field { flex: 1; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; outline: none; }
-    .input-field:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15); }
-    .loading-spinner { display: none; text-align: center; padding: 24px 0; }
-    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-light); border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .alert-error { display: none; background: var(--danger-light); color: var(--danger); border: 1px solid #ffcdd2; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; font-size: 0.95rem; }
-    #product-result { display: none; }
-    .product-header { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
-    .product-img { width: 90px; height: 90px; object-fit: contain; border-radius: 8px; background: #ffffff; border: 1px solid var(--border); flex-shrink: 0; padding: 4px; }
-    .product-info { flex: 1; }
-    .product-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; color: #111; }
-    .product-brand { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 6px; }
-    .source-badge { display: inline-block; font-size: 0.75rem; font-weight: 600; background: #e0f2f1; color: #00695c; padding: 2px 8px; border-radius: 4px; }
-    .status-badge { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; margin-bottom: 16px; }
-    .badge-icon { font-size: 1.4rem; }
-    .status-gf-safe { background: var(--success-light); color: var(--success); border: 1px solid #c8e6c9; }
-    .status-gf-unsafe { background: var(--danger-light); color: var(--danger); border: 1px solid #ffcdd2; }
-    .status-gf-unknown { background: var(--warning-light); color: var(--warning); border: 1px solid #ffe0b2; }
-    .chemical-box { margin-top: 12px; padding: 14px; border-radius: 8px; background: #fafafa; border: 1px solid var(--border); }
-    .chemical-box h4 { font-size: 0.95rem; margin-bottom: 8px; }
-    .chem-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .chem-chip { background: var(--danger-light); color: var(--danger); border: 1px solid #ffcdd2; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-    .clean-chip { background: var(--success-light); color: var(--success); border: 1px solid #c8e6c9; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; }
-    .ingredients-box { margin-top: 12px; background: #fafafa; border: 1px solid var(--border); padding: 12px 14px; border-radius: 8px; font-size: 0.88rem; color: #333; max-height: 220px; overflow-y: auto; line-height: 1.6; word-break: break-word; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.45;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--brand);
+      color: #fff;
+      padding: 12px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 22px; margin: 0; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+    header h1 span { color: var(--lime); }
+    button {
+      font: inherit;
+      font-weight: 700;
+      border: 2px solid var(--ink);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 14px;
+      min-height: 48px;
+      padding: 0 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+    button:active { transform: scale(0.98); }
+    .icon {
+      min-height: 42px;
+      min-width: 42px;
+      padding: 0;
+      border-color: rgba(255,255,255,0.4);
+      background: transparent;
+      color: #fff;
+      font-size: 20px;
+    }
+    .icon:hover { background: rgba(255,255,255,0.1); }
+    main { max-width: 580px; margin: 0 auto; padding: 16px 16px 48px; }
+    .scan-hero {
+      width: 100%;
+      min-height: 150px;
+      border: 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #0B3D2E, #145943);
+      color: #fff;
+      flex-direction: column;
+      font-size: 20px;
+      box-shadow: 0 4px 14px rgba(11,61,46,0.25);
+    }
+    .scan-hero small { font-weight: 400; font-size: 13px; opacity: .88; margin-top: 4px; }
+    .card {
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      margin-top: 14px;
+      background: #fff;
+    }
+    .card h2 { font-size: 17px; margin: 0 0 10px; color: var(--brand); display: flex; align-items: center; gap: 8px; }
+    .row { display: flex; gap: 8px; }
+    input, textarea, select {
+      font: inherit;
+      width: 100%;
+      min-height: 48px;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: #fff;
+      color: var(--ink);
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(11,61,46,0.15);
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+    .primary:hover { background: #072b20; }
+    .btn-sm { min-height: 36px; padding: 4px 12px; font-size: 13px; border-radius: 8px; }
+    .hint { color: var(--mute); font-size: 13px; margin: 8px 0 0; line-height: 1.4; }
+    #status {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--panel);
+      font-weight: 600;
+      display: none;
+      line-height: 1.5;
+    }
+    #status.err { background: var(--rbg); color: var(--r); border: 1px solid #ffcdd2; }
+    .spin {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid var(--line);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: s 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: -2px;
+    }
+    @keyframes s { to { transform: rotate(360deg); } }
+    #preview { width: 100%; max-height: 200px; object-fit: contain; border-radius: 14px; background: var(--panel); margin-top: 14px; display: none; }
+    
+    /* Result Display Styling */
+    .pname { font-size: 22px; font-weight: 800; margin: 18px 0 6px; color: var(--ink); }
+    .pbrand { font-size: 14px; color: var(--mute); margin-bottom: 12px; }
+    .score-container { display: flex; align-items: center; gap: 16px; margin: 14px 0; }
+    .dial {
+      flex: none;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 30px;
+      font-weight: 800;
+      border: 6px solid;
+    }
+    .tone-g { background: var(--gbg); color: var(--g); border-color: var(--g); }
+    .tone-y { background: var(--ybg); color: var(--y); border-color: var(--y); }
+    .tone-r { background: var(--rbg); color: var(--r); border-color: var(--r); }
+    .score-text { font-size: 14px; color: var(--ink); font-weight: 600; line-height: 1.4; }
+    
+    .banner { border-radius: 16px; padding: 14px 16px; margin-top: 14px; border: 2px solid; }
+    .banner h3 { margin: 0; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .banner p { margin: 6px 0 0; font-size: 14px; }
+    .banner-g { background: var(--gbg); color: var(--g); border-color: var(--g); }
+    .banner-y { background: var(--ybg); color: var(--y); border-color: var(--y); }
+    .banner-r { background: var(--rbg); color: var(--r); border-color: var(--r); }
+    
+    .item { border-left: 6px solid; border-radius: 10px; padding: 10px 12px; margin-top: 10px; background: var(--panel); font-size: 14px; }
+    .ingredients-box {
+      margin-top: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: #333;
+      max-height: 220px;
+      overflow-y: auto;
+      line-height: 1.6;
+      word-break: break-word;
+    }
     .highlight-gluten { background-color: #ffcdd2; color: #b71c1c; font-weight: bold; padding: 1px 4px; border-radius: 3px; }
     .highlight-chem { background-color: #ffe0b2; color: #e65100; font-weight: bold; padding: 1px 4px; border-radius: 3px; }
-    .accordion { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
-    .accordion-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); user-select: none; }
-    .accordion-content { display: none; margin-top: 12px; }
-    .accordion-content.show { display: block; }
-    .chem-tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-    .chem-tag { background: #eeeeee; padding: 4px 10px; border-radius: 16px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; }
-    .chem-tag button { background: none; border: none; color: #888; font-weight: bold; cursor: pointer; }
-    .add-chem-form { display: flex; gap: 6px; }
-    .footer { text-align: center; font-size: 0.8rem; color: var(--text-muted); margin-top: 24px; }
+
+    dialog {
+      border: 3px solid var(--ink);
+      border-radius: 20px;
+      max-width: 500px;
+      width: calc(100% - 32px);
+      padding: 20px;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    dialog::backdrop { background: rgba(0,0,0,0.55); }
+    #reader-container { position: relative; border-radius: 14px; overflow: hidden; background: #000; margin-top: 10px; }
+    #reader { width: 100%; min-height: 240px; }
+
+    .chem-tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .chem-tag { background: #eeeeee; padding: 4px 10px; border-radius: 16px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+    .chem-tag button { min-height: unset; padding: 0; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; }
+    .footer { text-align: center; font-size: 12px; color: var(--mute); margin-top: 28px; line-height: 1.5; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🔍 SafeScan</h1>
-    <p>Gluten-Free & Cosmetic Ingredient Scanner</p>
+    <h1>🔍 Clean<span>Scan</span></h1>
+    <button type="button" class="icon" id="openSettings" aria-label="Settings">⚙</button>
   </header>
-  <div class="container">
-    <div class="card">
-      <div class="card-title">📸 Camera Barcode Scanner</div>
-      <div id="reader-container"><div id="reader"></div></div>
-      <button id="toggleScannerBtn" class="btn btn-primary" onclick="toggleCameraScanner()">Start Camera Scanner</button>
-    </div>
-    <div class="card">
-      <div class="card-title">⌨️ Manual Barcode Search</div>
-      <form class="search-form" onsubmit="handleManualSubmit(event)">
-        <input type="text" id="barcodeInput" class="input-field" placeholder="e.g. 737052538122 or 3017620422003" pattern="[0-9]*" inputmode="numeric" required />
-        <button type="submit" class="btn btn-primary" style="width: auto; padding: 0 20px;">Search</button>
-      </form>
-    </div>
-    <div id="loading" class="loading-spinner">
-      <div class="spinner"></div>
-      <p id="loading-text">Searching product database...</p>
-    </div>
-    <div id="error-alert" class="alert-error"></div>
-    <div id="product-result" class="card">
-      <div class="product-header">
-        <img id="product-image" class="product-img" src="" alt="Product Image" />
-        <div class="product-info">
-          <h2 id="product-name" class="product-title">Product Name</h2>
-          <p id="product-brand" class="product-brand">Brand Name</p>
-          <span id="product-source" class="source-badge">Database</span>
+
+  <main>
+    <!-- Photo Label Scanner Hero -->
+    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+    <button type="button" class="scan-hero" id="scanBtn" onclick="document.getElementById('photoInput').click()">
+      <span style="font-size:36px; margin-bottom:4px;">📷</span>
+      Scan Ingredient Label
+      <small>Take a photo or choose from gallery</small>
+    </button>
+
+    <!-- Barcode Section -->
+    <section class="card">
+      <h2>🏷️ Look up by Barcode</h2>
+      <div class="row">
+        <input type="search" id="upc" inputmode="numeric" placeholder="Enter UPC / EAN barcode" />
+        <button type="button" class="primary" id="lookupBtn" onclick="handleManualBarcode()">Look up</button>
+      </div>
+      <button type="button" id="camScanBtn" style="width:100%; margin-top:10px;" onclick="openCameraModal()">
+        📸 Scan barcode with camera
+      </button>
+      <p class="hint">Searches Open Beauty Facts (cosmetics/shampoos), Open Food Facts, & Open Products Facts.</p>
+    </section>
+
+    <!-- Manual Text Section -->
+    <section class="card">
+      <h2>📝 Or Paste Ingredient List</h2>
+      <textarea id="manualText" placeholder="Paste ingredients or type product name (e.g. Head & Shoulders shampoo ingredients...)"></textarea>
+      <button type="button" class="primary" id="analyzeTextBtn" style="width:100%; margin-top:10px;" onclick="handleManualText()">
+        Analyze Ingredients
+      </button>
+    </section>
+
+    <div id="status" role="status"></div>
+    <img id="preview" alt="Captured label">
+    <div id="results"></div>
+
+    <!-- Watchlist Manager Accordion -->
+    <section class="card" style="margin-top:20px;">
+      <h2 style="cursor:pointer;" onclick="toggleWatchlist()">
+        ⚙️ Chemical Watchlist (<span id="chemCount">0</span>)
+        <span id="watchArrow" style="margin-left:auto;">▼</span>
+      </h2>
+      <div id="watchBody" style="display:none; margin-top:10px;">
+        <p class="hint" style="margin-bottom:10px;">Flagged chemicals analyzed in cosmetic & personal care ingredient lists:</p>
+        <div id="chemTags" class="chem-tag-cloud"></div>
+        <div class="row" style="margin-top:10px;">
+          <input type="text" id="newChemInput" placeholder="Add chemical (e.g. titanium dioxide)" />
+          <button type="button" class="btn-sm" onclick="addChemical()">Add</button>
         </div>
+        <button type="button" class="btn-sm" style="margin-top:10px; width:100%; background:#f0f0f0;" onclick="resetWatchlist()">
+          Reset Default Watchlist
+        </button>
       </div>
-      <div id="gf-badge" class="status-badge status-gf-unknown">
-        <span class="badge-icon">❓</span>
-        <div id="gf-badge-text">Gluten Status: Checking...</div>
-      </div>
-      <div class="chemical-box">
-        <h4>🧪 Watchlist Chemical Scan</h4>
-        <div id="chem-results-container"></div>
-      </div>
-      <div style="margin-top: 16px;">
-        <h4 style="font-size: 0.95rem; margin-bottom: 6px; color: #333;">📋 Full Ingredient List</h4>
-        <div id="ingredients-text" class="ingredients-box">No ingredients available.</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="accordion">
-        <div class="accordion-header" onclick="toggleAccordion()">
-          <span>⚙️ Customizable Watchlist Chemicals (<span id="chem-count">0</span>)</span>
-          <span id="accordion-arrow">▼</span>
-        </div>
-        <div id="accordion-content" class="accordion-content">
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
-            Customize the chemical array used to scan ingredient lists for cosmetics and household items.
-          </p>
-          <div id="chem-tags" class="chem-tag-cloud"></div>
-          <form class="add-chem-form" onsubmit="handleAddChemical(event)">
-            <input type="text" id="newChemInput" class="input-field" placeholder="Add chemical name (e.g. titanium dioxide)" required />
-            <button type="submit" class="btn btn-outline btn-sm">Add</button>
-          </form>
-          <button class="btn btn-outline btn-sm" style="margin-top: 10px;" onclick="resetDefaultChemicals()">Reset Defaults</button>
-        </div>
-      </div>
-    </div>
+    </section>
+
     <div class="footer">
-      Powered by Open Food Facts & Open Beauty Facts APIs • No API Keys Required
+      CleanScan • Open Beauty Facts & Open Food Facts API Grounded<br>
+      Supports Free Gemini AI Studio & OpenRouter API Keys in Settings ⚙
     </div>
-  </div>
+  </main>
+
+  <!-- Settings Dialog (API Keys) -->
+  <dialog id="settingsDialog">
+    <h2 style="margin-top:0;">Free AI API Key</h2>
+    <p class="hint" style="margin-top:0;">
+      Paste an optional Google AI Studio (Gemini) or OpenRouter key for AI photo OCR, claim fact-checks, store brand swaps, and DIY recipes!
+    </p>
+    <input type="password" id="keyInput" placeholder="Paste API key (AI Studio or OpenRouter)" style="margin-top:10px;" />
+    <div class="row" style="margin-top:14px;">
+      <button type="button" class="primary" style="flex:1;" onclick="saveApiKey()">Save Key</button>
+      <button type="button" onclick="clearApiKey()">Remove</button>
+      <button type="button" onclick="document.getElementById('settingsDialog').close()">Close</button>
+    </div>
+    <p class="hint" id="keyMsg" style="margin-top:10px; font-weight:600;"></p>
+  </dialog>
+
+  <!-- Camera Barcode Scanner Dialog -->
+  <dialog id="scannerDialog" style="max-width:550px;">
+    <h2 style="margin-top:0; font-size:18px;">Point camera at barcode</h2>
+    <div style="margin-bottom:10px;">
+      <select id="cameraSelect" onchange="switchCamera()"><option value="">Auto-detect Rear Camera</option></select>
+    </div>
+    <div id="reader-container">
+      <div id="reader"></div>
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <button type="button" id="torchBtn" style="flex:1; display:none;" onclick="toggleTorch()">🔦 Flashlight On</button>
+      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Cancel</button>
+    </div>
+    <p class="hint" style="text-align:center; margin-top:8px;">
+      💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.
+    </p>
+  </dialog>
 
   <script>
-    const chems = ['para' + 'ben', 'methylpara' + 'ben', 'propylpara' + 'ben', 'butylpara' + 'ben', 'ethylpara' + 'ben', 'sul' + 'fate', 'sodium lauryl sul' + 'fate', 'sls', 'sodium laureth sul' + 'fate', 'sles', 'ammonium lauryl sul' + 'fate', 'phthal' + 'ate', 'dep', 'dbp', 'dehp', 'oxyben' + 'zone', 'benzophenone', 'triclo' + 'san', 'frag' + 'rance', 'parfum'];
-    let flaggedChemicals = [...chems];
+    const $ = id => document.getElementById(id);
+    const K = "cleanscan_api_key";
+    const getKey = () => { try { return localStorage.getItem(K) || ""; } catch (e) { return ""; } };
+    const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const tone = n => n >= 70 ? "g" : n >= 40 ? "y" : "r";
+
+    // Watchlist chemicals
+    const defaultChems = ['paraben', 'methylparaben', 'propylparaben', 'butylparaben', 'ethylparaben', 'sulfate', 'sodium lauryl sulfate', 'sls', 'sodium laureth sulfate', 'sles', 'ammonium lauryl sulfate', 'phthalate', 'dep', 'dbp', 'dehp', 'oxybenzone', 'benzophenone', 'triclosan', 'fragrance', 'parfum', 'synthetic fragrance'];
+    let flaggedChems = [...defaultChems];
 
     function initWatchlist() {
-      const saved = localStorage.getItem('safescan_flagged_chems');
+      const saved = localStorage.getItem('cleanscan_chems');
       if (saved) {
-        try { flaggedChemicals = JSON.parse(saved); }
-        catch (e) { flaggedChemicals = [...chems]; }
+        try { flaggedChems = JSON.parse(saved); } catch (e) { flaggedChems = [...defaultChems]; }
       }
-      renderChemicalTags();
+      renderWatchlist();
     }
 
-    function saveWatchlist() {
-      localStorage.setItem('safescan_flagged_chems', JSON.stringify(flaggedChemicals));
-      renderChemicalTags();
-    }
-
-    function renderChemicalTags() {
-      const container = document.getElementById('chem-tags');
-      document.getElementById('chem-count').innerText = flaggedChemicals.length;
+    function renderWatchlist() {
+      $('chemCount').innerText = flaggedChems.length;
+      const container = $('chemTags');
       container.innerHTML = '';
-      flaggedChemicals.forEach((chem, index) => {
+      flaggedChems.forEach((chem, idx) => {
         const tag = document.createElement('div');
         tag.className = 'chem-tag';
-        tag.innerHTML = '<span>' + chem + '</span><button type="button" onclick="removeChemical(' + index + ')">✕</button>';
+        tag.innerHTML = '<span>' + esc(chem) + '</span><button type="button" onclick="removeChem(' + idx + ')">✕</button>';
         container.appendChild(tag);
       });
     }
 
-    function handleAddChemical(event) {
-      event.preventDefault();
-      const input = document.getElementById('newChemInput');
-      const value = input.value.trim().toLowerCase();
-      if (value && !flaggedChemicals.includes(value)) {
-        flaggedChemicals.push(value);
-        saveWatchlist();
-        input.value = '';
+    function addChemical() {
+      const val = $('newChemInput').value.trim().toLowerCase();
+      if (val && !flaggedChems.includes(val)) {
+        flaggedChems.push(val);
+        localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+        renderWatchlist();
+        $('newChemInput').value = '';
       }
     }
 
-    function removeChemical(index) {
-      flaggedChemicals.splice(index, 1);
-      saveWatchlist();
+    function removeChem(idx) {
+      flaggedChems.splice(idx, 1);
+      localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+      renderWatchlist();
     }
 
-    function resetDefaultChemicals() {
-      flaggedChemicals = [...chems];
-      saveWatchlist();
+    function resetWatchlist() {
+      flaggedChems = [...defaultChems];
+      localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+      renderWatchlist();
     }
 
-    function toggleAccordion() {
-      const content = document.getElementById('accordion-content');
-      const arrow = document.getElementById('accordion-arrow');
-      content.classList.toggle('show');
-      arrow.innerText = content.classList.contains('show') ? '▲' : '▼';
-    }
-
-    let html5QrCode = null;
-    let isScanning = false;
-
-    function toggleCameraScanner() {
-      if (isScanning) stopCameraScanner();
-      else startCameraScanner();
-    }
-
-    function startCameraScanner() {
-      if (!html5QrCode) html5QrCode = new Html5Qrcode('reader');
-      hideError();
-      const config = { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.777778 };
-      html5QrCode.start({ facingMode: 'environment' }, config, onScanSuccess, onScanFailure)
-        .then(() => {
-          isScanning = true;
-          const btn = document.getElementById('toggleScannerBtn');
-          btn.innerText = 'Stop Camera Scanner';
-          btn.classList.add('btn-secondary');
-          btn.classList.remove('btn-primary');
-        })
-        .catch(() => showError('Camera error: Please enable permissions or enter barcode manually.'));
-    }
-
-    function stopCameraScanner() {
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(() => {
-          isScanning = false;
-          const btn = document.getElementById('toggleScannerBtn');
-          btn.innerText = 'Start Camera Scanner';
-          btn.classList.add('btn-primary');
-          btn.classList.remove('btn-secondary');
-        }).catch(err => console.error(err));
+    function toggleWatchlist() {
+      const body = $('watchBody');
+      const arrow = $('watchArrow');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        arrow.innerText = '▲';
+      } else {
+        body.style.display = 'none';
+        arrow.innerText = '▼';
       }
     }
 
-    function onScanSuccess(decodedText) {
-      stopCameraScanner();
-      document.getElementById('barcodeInput').value = decodedText;
-      fetchProductData(decodedText);
+    function status(msg, kind) {
+      const el = $("status");
+      if (!msg) { el.style.display = "none"; return; }
+      el.style.display = "block";
+      el.className = kind || "";
+      el.innerHTML = kind ? msg : '<span class="spin"></span>' + msg;
     }
 
-    function onScanFailure() {}
+    // Settings
+    $('openSettings').onclick = () => {
+      $('keyInput').value = getKey();
+      $('keyMsg').textContent = getKey() ? "Key saved on device." : "No API key saved.";
+      $('settingsDialog').showModal();
+    };
 
-    function handleManualSubmit(event) {
-      event.preventDefault();
-      const barcode = document.getElementById('barcodeInput').value.trim();
-      if (barcode) {
-        if (isScanning) stopCameraScanner();
-        fetchProductData(barcode);
-      }
-    }
-
-    async function fetchProductData(barcode) {
-      showLoading(true, 'Searching Open Food Facts API...');
-      hideError();
-      hideResult();
-
-      const cleanBarcode = barcode.replace(/[^0-9]/g, '');
-
+    function saveApiKey() {
+      const v = $('keyInput').value.trim();
+      if (!v) return;
       try {
-        const domain1 = 'world.openfood' + 'facts.org';
-        const offUrl = 'https://' + domain1 + '/api/v0/product/' + cleanBarcode + '.json';
-        let response = await fetch(offUrl);
-        let data = await response.json();
-
-        if (data && data.status === 1 && data.product) {
-          showLoading(false);
-          analyzeAndDisplayProduct(data.product, 'Open Food Facts');
-          return;
-        }
-
-        showLoading(true, 'Checking Open Beauty Facts API...');
-        const domain2 = 'world.openbeauty' + 'facts.org';
-        const obfUrl = 'https://' + domain2 + '/api/v0/product/' + cleanBarcode + '.json';
-        response = await fetch(obfUrl);
-        data = await response.json();
-
-        if (data && data.status === 1 && data.product) {
-          showLoading(false);
-          analyzeAndDisplayProduct(data.product, 'Open Beauty Facts');
-          return;
-        }
-
-        showLoading(false);
-        showError('Barcode ' + cleanBarcode + ' was not found in Open Food Facts or Open Beauty Facts databases.');
-      } catch (err) {
-        showLoading(false);
-        showError('Failed to connect to product APIs. Please check your network connection.');
+        localStorage.setItem(K, v);
+        $('keyMsg').textContent = "Saved successfully!";
+      } catch (e) {
+        $('keyMsg').textContent = "Storage blocked by browser.";
       }
     }
 
-    function analyzeAndDisplayProduct(product, sourceName) {
-      const productName = product.product_name || product.product_name_en || 'Unknown Product';
-      const brand = product.brands || 'Unknown Brand';
-      const image = product.image_url || product.image_front_url || product.image_small_url || '';
-      const ingredientsText = product.ingredients_text || product.ingredients_text_en || product.ingredients_text_with_allergens || '';
+    function clearApiKey() {
+      localStorage.removeItem(K);
+      $('keyInput').value = "";
+      $('keyMsg').textContent = "Removed.";
+    }
 
-      document.getElementById('product-name').innerText = productName;
-      document.getElementById('product-brand').innerText = brand;
-      document.getElementById('product-image').src = image || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'><rect width='90' height='90' fill='%23eee'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23999' font-size='11'>No Image</text></svg>";
-      document.getElementById('product-source').innerText = sourceName;
+    // Image Upload / Photo Scan
+    $('photoInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64Data = event.target.result.split(',')[1];
+        const preview = $('preview');
+        preview.src = event.target.result;
+        preview.style.display = 'block';
 
-      const allergensTags = product.allergens_tags || [];
-      const allergensHierarchy = product.allergens_hierarchy || [];
+        const key = getKey();
+        if (key) {
+          runAiAnalysis({ text: "Analyze ingredient label image", img: base64Data });
+        } else {
+          status("No AI API key found in Settings ⚙. Asking AI or OCR requires a free Google AI Studio key.", "err");
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Barcode Fetch (Open Beauty Facts, Open Food Facts, Open Products Facts)
+    async function handleManualBarcode() {
+      const barcode = $('upc').value.trim();
+      if (!barcode) return;
+      fetchBarcodeData(barcode);
+    }
+
+    async function fetchBarcodeData(barcode) {
+      const cleanCode = barcode.replace(/[^0-9]/g, '');
+      if (!cleanCode) { status("Please enter a valid numeric barcode.", "err"); return; }
+
+      status("Searching Open Beauty Facts & Open Food Facts...");
+      $('preview').style.display = 'none';
+
+      const candidates = [cleanCode];
+      if (cleanCode.length === 12) candidates.push('0' + cleanCode);
+      else if (cleanCode.length === 13 && cleanCode.startsWith('0')) candidates.push(cleanCode.substring(1));
+
+      const databases = [
+        { name: 'Open Beauty Facts', host: 'world.openbeautyfacts.org' },
+        { name: 'Open Food Facts', host: 'world.openfoodfacts.org' },
+        { name: 'Open Products Facts', host: 'world.openproductsfacts.org' }
+      ];
+
+      for (const db of databases) {
+        for (const code of candidates) {
+          try {
+            status('Checking ' + db.name + ' (' + code + ')...');
+            const res = await fetch('https://' + db.host + '/api/v0/product/' + code + '.json');
+            const data = await res.json();
+
+            if (data && data.status === 1 && data.product) {
+              const product = data.product;
+              const name = product.product_name || product.product_name_en || 'Unknown Product';
+              const brand = product.brands || 'Unknown Brand';
+              const ingredients = product.ingredients_text || product.ingredients_text_en || product.ingredients_text_with_allergens || '';
+              
+              if (getKey()) {
+                runAiAnalysis({ text: `Product Name: ${name}\nBrand: ${brand}\nBarcode: ${code}\nIngredients: ${ingredients}` });
+              } else {
+                renderLocalAnalysis(name, brand, ingredients, db.name);
+              }
+              return;
+            }
+          } catch (err) { console.warn('Database error:', err); }
+        }
+      }
+
+      // Fallback if not found in open databases
+      const key = getKey();
+      if (key) {
+        status("Barcode not in open database. Requesting AI web lookup for UPC " + cleanCode + "...");
+        runAiAnalysis({ text: "UPC Barcode: " + cleanCode });
+      } else {
+        const contribUrl = 'https://' + 'world.openbeautyfacts.org' + '/cgi/product.pl?type=add&code=' + cleanCode;
+        status('Barcode <strong>' + cleanCode + '</strong> not found in Open Beauty Facts, Open Food Facts, or Open Products Facts.<br><br>💡 <strong>Head & Shoulders</strong> and cosmetic items belong in <em>Open Beauty Facts</em>. <a href="' + contribUrl + '" target="_blank" style="color:#0B3D2E; font-weight:bold; text-decoration:underline;">Click here to submit this barcode to Open Beauty Facts</a> or add a free AI API Key in Settings ⚙ for automatic web lookup!', "err");
+      }
+    }
+
+    // Manual Text Analysis
+    function handleManualText() {
+      const text = $('manualText').value.trim();
+      if (!text) return;
+      if (getKey()) {
+        runAiAnalysis({ text: text });
+      } else {
+        renderLocalAnalysis("Custom Ingredient List", "User Input", text, "Local Scan Engine");
+      }
+    }
+
+    // Local Analysis (No API key needed)
+    function renderLocalAnalysis(pName, pBrand, ingredientsText, sourceName) {
+      status("");
       const glutenTriggers = ['wheat', 'barley', 'rye', 'malt', 'gluten', 'spelt', 'kamut', 'triticale', 'durum', 'semolina'];
+      const ingLower = ingredientsText.toLowerCase();
 
       let containsGluten = false;
-      let detectedGlutenTerms = [];
-
-      const combinedTags = [...allergensTags, ...allergensHierarchy].map(t => t.toLowerCase());
-      combinedTags.forEach(tag => {
-        glutenTriggers.forEach(trigger => {
-          if (tag.includes(trigger)) {
-            containsGluten = true;
-            if (!detectedGlutenTerms.includes(trigger)) detectedGlutenTerms.push(trigger);
-          }
-        });
-      });
-
-      const ingLower = ingredientsText.toLowerCase();
+      let detectedGluten = [];
       glutenTriggers.forEach(trigger => {
         const regex = new RegExp('\b' + trigger + '\b', 'i');
         if (regex.test(ingLower)) {
           containsGluten = true;
-          if (!detectedGlutenTerms.includes(trigger)) detectedGlutenTerms.push(trigger);
+          if (!detectedGluten.includes(trigger)) detectedGluten.push(trigger);
         }
       });
 
-      const gfBadge = document.getElementById('gf-badge');
-      const gfText = document.getElementById('gf-badge-text');
-
-      if (containsGluten) {
-        gfBadge.className = 'status-badge status-gf-unsafe';
-        gfBadge.querySelector('.badge-icon').innerText = '⚠️';
-        gfText.innerHTML = '<strong>Contains Gluten</strong> (Flagged: ' + detectedGlutenTerms.join(', ') + ')';
-      } else if (ingredientsText.length > 0 || combinedTags.length > 0) {
-        gfBadge.className = 'status-badge status-gf-safe';
-        gfBadge.querySelector('.badge-icon').innerText = '✅';
-        gfText.innerHTML = '<strong>Gluten-Free</strong> (No wheat, barley, rye, or malt detected)';
-      } else {
-        gfBadge.className = 'status-badge status-gf-unknown';
-        gfBadge.querySelector('.badge-icon').innerText = '❓';
-        gfText.innerHTML = '<strong>Gluten Status Unknown</strong> (Ingredient list missing in database)';
-      }
-
-      const chemContainer = document.getElementById('chem-results-container');
       let foundChems = [];
-
       if (ingredientsText) {
-        flaggedChemicals.forEach(chem => {
+        flaggedChems.forEach(chem => {
           const regex = new RegExp('\b' + chem, 'i');
-          if (regex.test(ingLower)) {
-            foundChems.push(chem);
-          }
+          if (regex.test(ingLower)) foundChems.push(chem);
         });
       }
 
-      if (foundChems.length > 0) {
-        chemContainer.innerHTML = '<p style="font-size:0.85rem; color: var(--danger); font-weight:600;">⚠️ Watchlist Chemicals Found (' + foundChems.length + '):</p><div class="chem-list">' + foundChems.map(c => '<span class="chem-chip">🚫 ' + c + '</span>').join('') + '</div>';
-      } else if (ingredientsText) {
-        chemContainer.innerHTML = '<div class="clean-chip">🌿 Clean Scan: No watchlist chemicals detected in ingredient list!</div>';
-      } else {
-        chemContainer.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted);">No ingredient text available to scan.</p>';
-      }
+      let score = 85;
+      if (containsGluten) score -= 30;
+      score -= (foundChems.length * 10);
+      score = Math.max(10, Math.min(100, score));
 
-      const ingBox = document.getElementById('ingredients-text');
-      if (ingredientsText) {
-        let highlighted = escapeHtml(ingredientsText);
+      const tColor = tone(score);
+      const gsBannerClass = containsGluten ? "banner-r" : (ingredientsText ? "banner-g" : "banner-y");
+      const gsBannerTitle = containsGluten ? "⚠️ CONTAINS GLUTEN" : (ingredientsText ? "✅ NO GLUTEN FOUND" : "❓ GLUTEN STATUS UNKNOWN");
+      const gsBannerDesc = containsGluten ? "Flagged gluten triggers: " + detectedGluten.join(', ') : (ingredientsText ? "No wheat, barley, rye, or malt detected in ingredient text." : "Ingredient list missing from database entry.");
 
-        glutenTriggers.forEach(trigger => {
-          const regex = new RegExp('\b(' + trigger + ')\b', 'gi');
-          highlighted = highlighted.replace(regex, '<span class="highlight-gluten"></span>');
-        });
+      let flagsHtml = foundChems.map(c => `<div class="item" style="border-color:var(--r);"><b>🚫 ${esc(c)} (Flagged Chemical)</b><br>Detected in ingredient list scan against watchlist.</div>`).join('');
+      if (!flagsHtml) flagsHtml = `<div class="item" style="border-color:var(--g);"><b>🌿 Clean Scan</b><br>No watchlist chemicals detected.</div>`;
 
-        flaggedChemicals.forEach(chem => {
-          const regex = new RegExp('\b(' + chem + ')', 'gi');
-          highlighted = highlighted.replace(regex, '<span class="highlight-chem"></span>');
-        });
+      let highlighted = esc(ingredientsText || "No ingredient text available.");
+      glutenTriggers.forEach(t => {
+        const r = new RegExp('\b(' + t + ')\b', 'gi');
+        highlighted = highlighted.replace(r, '<span class="highlight-gluten">$1</span>');
+      });
+      flaggedChems.forEach(c => {
+        const r = new RegExp('\b(' + c + ')', 'gi');
+        highlighted = highlighted.replace(r, '<span class="highlight-chem">$1</span>');
+      });
 
-        ingBox.innerHTML = highlighted;
-      } else {
-        ingBox.innerText = 'No ingredient list provided in database entry.';
-      }
-
-      showResult();
+      $('results').innerHTML = `
+        <div class="pname">${esc(pName)}</div>
+        <div class="pbrand">Brand: ${esc(pBrand)} • Database: ${esc(sourceName)}</div>
+        <div class="score-container">
+          <div class="dial tone-${tColor}">${score}</div>
+          <div class="score-text">
+            <strong>Safety Rating: ${score}/100</strong><br>
+            Scanned against CFIA allergens & chemical watchlists.
+          </div>
+        </div>
+        <div class="banner ${gsBannerClass}">
+          <h3>${gsBannerTitle}</h3>
+          <p>${gsBannerDesc}</p>
+        </div>
+        <h4 style="margin: 16px 0 6px; font-size:16px;">🧪 Watchlist Chemical Scan</h4>
+        ${flagsHtml}
+        <h4 style="margin: 16px 0 6px; font-size:16px;">📋 Full Ingredient List</h4>
+        <div class="ingredients-box">${highlighted}</div>
+      `;
     }
 
-    function escapeHtml(text) { return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-    function showLoading(show, text) { document.getElementById('loading-text').innerText = text || 'Loading...'; document.getElementById('loading').style.display = show ? 'block' : 'none'; }
-    function showError(msg) { const el = document.getElementById('error-alert'); el.innerText = msg; el.style.display = 'block'; }
-    function hideError() { document.getElementById('error-alert').style.display = 'none'; }
-    function showResult() { const el = document.getElementById('product-result'); el.style.display = 'block'; el.scrollIntoView({ behavior: 'smooth' }); }
-    function hideResult() { document.getElementById('product-result').style.display = 'none'; }
+    // AI Analysis (Gemini / OpenRouter)
+    const SYS = `You are a toxicologist, nutritionist, and celiac/gluten-free specialist (following Canadian CFIA allergen standards). Analyze the product label, ingredients, or UPC barcode provided. Return ONLY valid JSON:
+{"product_name":"Name","brand":"Brand","score":75,"score_summary":"1-sentence verdict","gluten_status":"NO GLUTEN FOUND"|"WARNING"|"CONTAINS GLUTEN","gluten_details":"Gluten & cross-contamination check","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence harm explanation"}],"label_fact_check":"Verify front-of-pack marketing claims","store_swaps":["Cleaner store brand 1","Cleaner store brand 2"],"diy_recipe":{"title":"DIY Alternative","steps":"Practical homemade recipe"}}`;
 
-    window.addEventListener('DOMContentLoaded', initWatchlist);
+    async function runAiAnalysis({ text = "", img = "" }) {
+      const key = getKey();
+      if (!key) { $('openSettings').click(); return status("Paste your API key in Settings first.", "err"); }
+
+      $('results').innerHTML = "";
+      status("Analyzing ingredients, checking gluten & verifying claims...");
+
+      try {
+        let raw = "";
+        if (key.startsWith("sk-or-")) {
+          const content = [{ type: "text", text: SYS + "\n\nProduct Input:\n" + text }];
+          if (img) content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } });
+
+          const url_or = 'https://' + 'openrouter.ai' + '/api/v1/chat/completions';
+          const res = await fetch(url_or, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: "openrouter/free", messages: [{ role: "user", content }] })
+          });
+          const d = await res.json();
+          if (d.error) throw new Error(d.error.message);
+          raw = d.choices?.at(0)?.message?.content || "";
+        } else {
+          const parts = [{ text: text || "Analyze this product label image." }];
+          if (img) parts.push({ inlineData: { mimeType: "image/jpeg", data: img } });
+
+          const url_g = 'https://' + 'generativelanguage.googleapis.com' + '/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
+          const res = await fetch(url_g, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: SYS }] },
+              contents: [{ parts }],
+              generationConfig: { responseMimeType: "application/json" }
+            })
+          });
+          const d = await res.json();
+          if (d.error) throw new Error(d.error.message);
+          raw = d.candidates?.at(0)?.content?.parts?.map(p => p.text || "").join("") || "";
+        }
+
+        const r = JSON.parse(raw.replace(/```json|```/g, "").trim());
+        status("");
+
+        const s = Number(r.score) || 0;
+        const gs = String(r.gluten_status || "").toUpperCase();
+        const gt = gs.includes("NO GLUTEN") ? "g" : gs === "WARNING" ? "y" : "r";
+
+        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(--${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
+        const swaps = (r.store_swaps || []).map(x => `<li>${esc(x)}</li>`).join("");
+
+        let diyHtml = "";
+        if (r.diy_recipe && r.diy_recipe.title) {
+          diyHtml = `<div class="item" style="border-color:var(--lime); background:#f9fdf5; margin-top:14px;">
+            <b style="color:var(--brand);">🌱 DIY Alternative: ${esc(r.diy_recipe.title)}</b><br>${esc(r.diy_recipe.steps)}
+          </div>`;
+        }
+
+        $('results').innerHTML = `
+          <div class="pname">${esc(r.product_name || "Product Scan")}</div>
+          <div class="pbrand">${esc(r.brand || "AI Analysis")}</div>
+          <div class="score-container">
+            <div class="dial tone-${tone(s)}">${s}</div>
+            <div class="score-text">
+              <strong>${esc(r.score_summary || "")}</strong>
+            </div>
+          </div>
+          <div class="banner banner-${gt}">
+            <h3>${esc(r.gluten_status)}</h3>
+            <p>${esc(r.gluten_details)}</p>
+          </div>
+          ${flags ? `<h4 style="margin:16px 0 6px;">⚠️ Flagged Ingredients</h4>${flags}` : ''}
+          ${r.label_fact_check ? `<div class="item" style="border-color:var(--brand);"><b>🔍 Front-of-Pack Fact Check</b><br>${esc(r.label_fact_check)}</div>` : ''}
+          ${swaps ? `<div class="item" style="border-color:var(--g);"><b>🌿 Cleaner Store Swaps</b><ul>${swaps}</ul></div>` : ''}
+          ${diyHtml}
+        `;
+      } catch (err) {
+        status("AI Analysis Error: " + err.message, "err");
+      }
+    }
+
+    // Camera Barcode Scanner Modal with Auto-Focus & Torch
+    let html5QrCode = null;
+    let isScanning = false;
+    let torchOn = false;
+
+    async function openCameraModal() {
+      const dialog = $('scannerDialog');
+      dialog.showModal();
+      
+      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const select = $('cameraSelect');
+        if (devices && devices.length) {
+          select.innerHTML = '<option value="">Auto-detect Rear Camera</option>';
+          devices.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.innerText = d.label || ('Camera ' + d.id.substring(0, 6));
+            select.appendChild(opt);
+          });
+        }
+      } catch (e) {}
+
+      startScanner();
+    }
+
+    function startScanner() {
+      const select = $('cameraSelect');
+      const cameraId = select.value || null;
+
+      const cameraConfig = cameraId ? { deviceId: { exact: cameraId } } : {
+        facingMode: "environment",
+        advanced: [{ focusMode: "continuous" }]
+      };
+
+      const qrConfig = {
+        fps: 15,
+        qrbox: (w, h) => ({
+          width: Math.max(220, Math.min(340, Math.floor(w * 0.88))),
+          height: Math.max(120, Math.min(180, Math.floor(h * 0.45)))
+        }),
+        aspectRatio: 1.777778,
+        videoConstraints: {
+          focusMode: "continuous",
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 }
+        }
+      };
+
+      html5QrCode.start(cameraConfig, qrConfig, onScanSuccess, () => {})
+        .then(() => {
+          isScanning = true;
+          checkTorchSupport();
+        })
+        .catch(err => console.log("Camera error:", err));
+    }
+
+    function switchCamera() {
+      if (isScanning && html5QrCode) {
+        html5QrCode.stop().then(() => startScanner());
+      }
+    }
+
+    function checkTorchSupport() {
+      try {
+        const track = html5QrCode.getRunningTrack();
+        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+        if (capabilities.torch) {
+          $('torchBtn').style.display = 'inline-flex';
+        }
+      } catch (e) {}
+    }
+
+    function toggleTorch() {
+      if (!html5QrCode || !isScanning) return;
+      try {
+        const track = html5QrCode.getRunningTrack();
+        torchOn = !torchOn;
+        track.applyConstraints({ advanced: [{ torch: torchOn }] });
+        $('torchBtn').innerText = torchOn ? '🔦 Flashlight Off' : '🔦 Flashlight On';
+      } catch (e) {}
+    }
+
+    function onScanSuccess(decodedText) {
+      closeCameraModal();
+      $('upc').value = decodedText;
+      fetchBarcodeData(decodedText);
+    }
+
+    function closeCameraModal() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => { isScanning = false; }).catch(() => {});
+      }
+      $('scannerDialog').close();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initWatchlist();
+    });
   </script>
 </body>
 </html>
