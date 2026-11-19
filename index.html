@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3D2E">
 <title>CleanScan</title>
+<script src="https://unpkg.com"></script>
 <style>
 :root{--ink:#10201A;--mute:#4D5F57;--bg:#FFFFFF;--panel:#F1F5F2;--line:#C9D6CF;--brand:#0B3D2E;--lime:#C8F169;--g:#0F7B3F;--gbg:#DDF4E4;--y:#8A5A00;--ybg:#FFEFC2;--r:#B3261E;--rbg:#FDE0DD;color-scheme:light}
 *{box-sizing:border-box}
@@ -40,7 +41,7 @@ textarea{min-height:80px;resize:vertical}
 .pname{font-size:21px;font-weight:800;margin:8px 0 0}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:16px}
 .modal-box{background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:20px;max-width:500px;width:100%;padding:20px}
-video{width:100%;border-radius:14px;background:#000;max-height:45vh}
+#reader{width:100%;border-radius:14px;overflow:hidden;background:#000}
 </style>
 </head>
 <body>
@@ -95,7 +96,8 @@ video{width:100%;border-radius:14px;background:#000;max-height:45vh}
 <div id="scannerModal" class="modal-bg">
   <div class="modal-box">
     <h2 style="margin-top:0">Point camera at barcode</h2>
-    <video id="video" playsinline muted></video>
+    <div id="reader"></div>
+    <p class="hint" style="text-align:center">Hold 6–10 inches away in good lighting</p>
     <button type="button" style="width:100%;margin-top:12px" onclick="closeCam()">Cancel</button>
   </div>
 </div>
@@ -139,17 +141,8 @@ Evaluate health hazards specific to how the product is used:
 - For Food & Beverage: ultra-processed additives, synthetic dyes, trans fats, excess sodium/sugar, endocrine disruptors, and CFIA gluten/allergen risks.
 - For Personal Care, Hair, Sunblock & Household items: endocrine/hormone disruptors (parabens, phthalates, oxybenzone, octinoxate, triclosan), formaldehyde releasers (DMDM hydantoin, quaternium-15), harsh sulfates (SLS/SLES), synthetic fragrance/parfum allergens, PFAS, VOCs, and skin/lung irritants.
 Return ONLY valid JSON with this exact schema:
-{"category":"Food & Beverage"|"Personal Care & Hair"|"Sunblock & Skincare"|"Household & Cleaning","product_name":"Exact Product Name & Brand","score":75,"score_summary":"1-sentence overall health verdict","special_alert_title":"Gluten Check"|"Exposure & Safety Check","special_alert_status":"SAFE"|"WARNING"|"HIGH HAZARD","special_alert_details":"Gluten/cross-contamination details for food, OR skin absorption, hormone, and inhalation safety details for personal care/household items","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence health hazard explanation"}],"label_fact_check":"Verify front-of-pack claims (e.g. 'natural', 'clean', 'reef-safe', 'hypoallergenic')","store_swaps":["Cleaner Canadian store brand 1","Cleaner Canadian store brand 2"],"diy_recipe":{"title":"Simple DIY Alternative","steps":"Practical homemade recipe if applicable"}}`;
+{"category":"Food & Beverage"|"Personal Care & Hair"|"Sunblock & Skincare"|"Household & Cleaning","product_name":"Exact Product Name & Brand","score":75,"score_summary":"1-sentence overall health verdict","special_alert_title":"Gluten Check"|"Exposure & Safety Check","special_alert_status":"SAFE"|"WARNING"|"HIGH HAZARD","special_alert_details":"Gluten/cross-contamination details for food, OR skin absorption, hormone, and inhalation safety details for personal care/household items","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence health hazard explanation"}],"label_fact_check":"Verify front-of-pack marketing claims (e.g. 'natural', 'clean', 'reef-safe', 'hypoallergenic')","store_swaps":["Cleaner Canadian store brand 1","Cleaner Canadian store brand 2"],"diy_recipe":{"title":"Simple DIY Alternative","steps":"Practical homemade recipe if applicable"}}`;
 
 async function runAnalysis({ text = "", imgDataUrl = "" }) {
   const apiKey = getKey();
   if (!apiKey) {
-    status("Tap the gear icon (⚙) at the top right to add your free AI API key first.", "err");
-    openSettingsModal();
-    return;
-  }
-
-  $("results").innerHTML = "";
-  status("Identifying product & analyzing health hazards...");
-
-  try {
