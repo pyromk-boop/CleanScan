@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0B3D2E">
-  <title>CleanScan - Gluten & Toxin Label Scanner</title>
+  <title>CleanScan v5 - Gluten & Toxin Label Scanner</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
@@ -287,9 +287,16 @@
 
   <!-- Camera Barcode Scanner Dialog -->
   <dialog id="scannerDialog" style="max-width:550px;">
-    <h2 style="margin-top:0; font-size:18px;">Point camera at barcode</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <h2 style="margin:0; font-size:18px;">Point camera at barcode</h2>
+      <button type="button" class="btn-sm" onclick="flipFacingMode()" style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:6px 12px; font-weight:bold;">
+        🔄 Switch Camera (Rear/Selfie)
+      </button>
+    </div>
     <div style="margin-bottom:10px;">
-      <select id="cameraSelect" onchange="switchCamera()"><option value="">Auto-detect Rear Camera</option></select>
+      <select id="cameraSelect" onchange="switchCamera()">
+        <option value="">Auto-detect Rear Camera (Environment)</option>
+      </select>
     </div>
     <div id="reader-container">
       <div id="reader"></div>
@@ -299,7 +306,8 @@
       <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Cancel</button>
     </div>
     <p class="hint" style="text-align:center; margin-top:8px;">
-      💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.
+      💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.<br>
+      If selfie camera opens, tap <strong>🔄 Switch Camera</strong> or choose <strong>📷 Rear Camera</strong> above.
     </p>
   </dialog>
 
@@ -645,10 +653,11 @@
       }
     }
 
-    // Camera Barcode Scanner Modal with Auto-Focus & Torch
+    // Camera Barcode Scanner Modal with Rear Camera Preference & Camera Switching
     let html5QrCode = null;
     let isScanning = false;
     let torchOn = false;
+    let currentFacingMode = "environment"; // Default to back/rear camera
 
     async function openCameraModal() {
       const dialog = $('scannerDialog');
@@ -656,31 +665,30 @@
       
       if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
 
-      try {
-        const devices = await Html5Qrcode.getCameras();
-        const select = $('cameraSelect');
-        if (devices && devices.length) {
-          select.innerHTML = '<option value="">Auto-detect Rear Camera</option>';
-          devices.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.id;
-            opt.innerText = d.label || ('Camera ' + d.id.substring(0, 6));
-            select.appendChild(opt);
-          });
-        }
-      } catch (e) {}
-
       startScanner();
+    }
+
+    function flipFacingMode() {
+      currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+      $('cameraSelect').value = ""; // reset exact device ID selection so facingMode applies
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => startScanner()).catch(() => startScanner());
+      } else {
+        startScanner();
+      }
     }
 
     function startScanner() {
       const select = $('cameraSelect');
       const cameraId = select.value || null;
 
-      const cameraConfig = cameraId ? { deviceId: { exact: cameraId } } : {
-        facingMode: "environment",
-        advanced: [{ focusMode: "continuous" }]
-      };
+      // Clean constraint configuration
+      let cameraConfig;
+      if (cameraId) {
+        cameraConfig = { deviceId: { exact: cameraId } };
+      } else {
+        cameraConfig = { facingMode: currentFacingMode };
+      }
 
       const qrConfig = {
         fps: 15,
@@ -688,25 +696,68 @@
           width: Math.max(220, Math.min(340, Math.floor(w * 0.88))),
           height: Math.max(120, Math.min(180, Math.floor(h * 0.45)))
         }),
-        aspectRatio: 1.777778,
-        videoConstraints: {
-          focusMode: "continuous",
-          width: { min: 640, ideal: 1280 },
-          height: { min: 480, ideal: 720 }
-        }
+        aspectRatio: 1.777778
       };
 
       html5QrCode.start(cameraConfig, qrConfig, onScanSuccess, () => {})
         .then(() => {
           isScanning = true;
+          try {
+            const track = html5QrCode.getRunningTrack();
+            if (track && track.getCapabilities) {
+              const caps = track.getCapabilities();
+              if (caps.focusMode && caps.focusMode.includes("continuous")) {
+                track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+              }
+            }
+          } catch (e) {}
           checkTorchSupport();
+          populateCameraDropdown();
         })
-        .catch(err => console.log("Camera error:", err));
+        .catch(err => {
+          console.warn("Camera start failed with constraints, retrying fallback:", err);
+          if (!cameraId && currentFacingMode === "environment") {
+            // Fallback attempt with simple string
+            html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess, () => {})
+              .then(() => { isScanning = true; populateCameraDropdown(); })
+              .catch(e => {
+                // Second fallback to user facingMode if environment is unavailable
+                html5QrCode.start({ facingMode: "user" }, qrConfig, onScanSuccess, () => {})
+                  .then(() => { isScanning = true; populateCameraDropdown(); })
+                  .catch(err2 => console.error("Final camera error:", err2));
+              });
+          }
+        });
+    }
+
+    async function populateCameraDropdown() {
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        const select = $('cameraSelect');
+        if (devices && devices.length) {
+          const currentVal = select.value;
+          select.innerHTML = '<option value="">Auto Rear Camera (' + (currentFacingMode === 'environment' ? 'Rear' : 'Front') + ')</option>';
+          devices.forEach((d, idx) => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            const labelLower = (d.label || '').toLowerCase();
+            let labelText = d.label || ('Camera ' + (idx + 1));
+            if (labelLower.includes('back') || labelLower.includes('rear') || labelLower.includes('environment') || labelLower.includes('outer') || labelLower.includes('0')) {
+              labelText += ' 📷 (Rear)';
+            } else if (labelLower.includes('front') || labelLower.includes('user') || labelLower.includes('selfie') || labelLower.includes('facetime') || labelLower.includes('1')) {
+              labelText += ' 🤳 (Front/Selfie)';
+            }
+            opt.innerText = labelText;
+            select.appendChild(opt);
+          });
+          if (currentVal) select.value = currentVal;
+        }
+      } catch (e) {}
     }
 
     function switchCamera() {
       if (isScanning && html5QrCode) {
-        html5QrCode.stop().then(() => startScanner());
+        html5QrCode.stop().then(() => startScanner()).catch(() => startScanner());
       }
     }
 
