@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B3D2E">
 <title>CleanScan</title>
-<script src="https://unpkg.com"></script>
 <style>
 :root{--ink:#10201A;--mute:#4D5F57;--bg:#FFFFFF;--panel:#F1F5F2;--line:#C9D6CF;--brand:#0B3D2E;--lime:#C8F169;--g:#0F7B3F;--gbg:#DDF4E4;--y:#8A5A00;--ybg:#FFEFC2;--r:#B3261E;--rbg:#FDE0DD;color-scheme:light}
 *{box-sizing:border-box}
@@ -41,18 +40,18 @@ textarea{min-height:80px;resize:vertical}
 .pname{font-size:21px;font-weight:800;margin:8px 0 0}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center;padding:16px}
 .modal-box{background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:20px;max-width:500px;width:100%;padding:20px}
-#reader{width:100%;border-radius:14px;overflow:hidden;background:#000}
+video{width:100%;border-radius:14px;background:#000;max-height:45vh}
 </style>
 </head>
 <body>
 <noscript><div style="background:#B3261E;color:#fff;padding:16px;text-align:center;font-weight:bold">JavaScript is turned OFF in your browser! Enable JavaScript in browser settings to use CleanScan.</div></noscript>
 <header>
   <h1>Clean<span>Scan</span></h1>
-  <button type="button" class="icon" onclick="openSettingsModal()" aria-label="Settings">⚙</button>
+  <button type="button" class="icon" id="gearBtn" aria-label="Settings">⚙</button>
 </header>
 <main>
-  <input type="file" id="photo" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
-  <button type="button" class="scan" onclick="document.getElementById('photo').click()">
+  <input type="file" id="photo" accept="image/*" capture="environment" style="display:none">
+  <button type="button" class="scan" id="photoBtn">
     <span style="font-size:40px">📷</span>
     Scan ingredient label
     <small>Food, shampoo, sunblock, or household cleaner</small>
@@ -62,16 +61,16 @@ textarea{min-height:80px;resize:vertical}
     <h2>Look up by barcode</h2>
     <div class="row">
       <input type="search" id="upc" inputmode="numeric" placeholder="Enter UPC / EAN number">
-      <button type="button" class="primary" onclick="lookupBarcode(document.getElementById('upc').value)">Look up</button>
+      <button type="button" class="primary" id="lookupBtn">Look up</button>
     </div>
-    <button type="button" style="width:100%;margin-top:10px" onclick="startCamScan()">Scan barcode with camera</button>
+    <button type="button" style="width:100%;margin-top:10px" id="camScanBtn">Scan barcode with camera</button>
     <p class="hint">Searches Food, Beauty/Personal Care &amp; Household databases + AI lookup.</p>
   </section>
 
   <section class="card">
     <h2>Or paste ingredient list</h2>
     <textarea id="manualText" placeholder="Paste ingredients or product name (e.g. shampoo, sunscreen, snack)..."></textarea>
-    <button type="button" class="primary" style="width:100%;margin-top:10px" onclick="analyzeManual()">Analyze Ingredients</button>
+    <button type="button" class="primary" style="width:100%;margin-top:10px" id="manualBtn">Analyze Ingredients</button>
   </section>
 
   <div id="status" role="status"></div>
@@ -85,9 +84,9 @@ textarea{min-height:80px;resize:vertical}
     <p class="hint" style="margin-top:0">Stored only on this device. Supports Google AI Studio or OpenRouter.</p>
     <input type="password" id="key" placeholder="Paste API key">
     <div class="row" style="margin-top:14px">
-      <button type="button" class="primary" style="flex:1" onclick="saveApiKey()">Save</button>
-      <button type="button" onclick="clearApiKey()">Remove</button>
-      <button type="button" onclick="closeSettingsModal()">Close</button>
+      <button type="button" class="primary" style="flex:1" id="saveKeyBtn">Save</button>
+      <button type="button" id="clearKeyBtn">Remove</button>
+      <button type="button" id="closeKeyBtn">Close</button>
     </div>
     <p class="hint" id="keyMsg"></p>
   </div>
@@ -96,17 +95,31 @@ textarea{min-height:80px;resize:vertical}
 <div id="scannerModal" class="modal-bg">
   <div class="modal-box">
     <h2 style="margin-top:0">Point camera at barcode</h2>
-    <div id="reader"></div>
-    <p class="hint" style="text-align:center">Hold 6–10 inches away in good lighting</p>
-    <button type="button" style="width:100%;margin-top:12px" onclick="closeCam()">Cancel</button>
+    <video id="video" playsinline muted></video>
+    <p class="hint" style="text-align:center">Hold barcode steady 6–10 inches away</p>
+    <button type="button" style="width:100%;margin-top:12px" id="cancelCamBtn">Cancel</button>
   </div>
 </div>
 
 <script>
+window.onerror = function(msg, url, line) {
+  var el = document.getElementById("status");
+  if (el) {
+    el.style.display = "block";
+    el.className = "err";
+    el.textContent = "App Error (Line " + line + "): " + msg;
+  }
+};
+
 const $ = id => document.getElementById(id);
 const K = "cleanscan_api_key";
 const getKey = () => { try { return localStorage.getItem(K) || ""; } catch (e) { return ""; } };
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const esc = s => String(s ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
 const tone = n => n >= 70 ? "g" : n >= 40 ? "y" : "r";
 
 function status(msg, kind) {
@@ -119,13 +132,13 @@ function status(msg, kind) {
 
 function openSettingsModal() {
   $("key").value = getKey();
-  $("keyMsg").textContent = getKey() ? "Key saved." : "No key saved.";
+  $("keyMsg").textContent = getKey() ? "Key saved on this device." : "No key saved yet.";
   $("settingsModal").style.display = "flex";
 }
 function closeSettingsModal() { $("settingsModal").style.display = "none"; }
 function saveApiKey() {
   const v = $("key").value.trim();
-  if (!v) return;
+  if (!v) { $("keyMsg").textContent = "Paste a valid API key first."; return; }
   try { localStorage.setItem(K, v); $("keyMsg").textContent = "Saved!"; } catch (e) { $("keyMsg").textContent = "Storage blocked."; }
 }
 function clearApiKey() {
@@ -134,15 +147,32 @@ function clearApiKey() {
   $("keyMsg").textContent = "Removed.";
 }
 
-const SYS = `You are a toxicologist, cosmetic chemist, nutritionist, and Canadian health & allergen specialist (Health Canada / CFIA standards).
-First, accurately identify the exact product from the label photo, ingredient list, or UPC/EAN barcode—never guess a food item if the barcode or ingredients belong to shampoo, conditioner, sunblock, lotion, makeup, soap, or a household cleaner.
-Classify "category" as one of: "Food & Beverage", "Personal Care & Hair", "Sunblock & Skincare", or "Household & Cleaning".
-Evaluate health hazards specific to how the product is used:
-- For Food & Beverage: ultra-processed additives, synthetic dyes, trans fats, excess sodium/sugar, endocrine disruptors, and CFIA gluten/allergen risks.
-- For Personal Care, Hair, Sunblock & Household items: endocrine/hormone disruptors (parabens, phthalates, oxybenzone, octinoxate, triclosan), formaldehyde releasers (DMDM hydantoin, quaternium-15), harsh sulfates (SLS/SLES), synthetic fragrance/parfum allergens, PFAS, VOCs, and skin/lung irritants.
-Return ONLY valid JSON with this exact schema:
-{"category":"Food & Beverage"|"Personal Care & Hair"|"Sunblock & Skincare"|"Household & Cleaning","product_name":"Exact Product Name & Brand","score":75,"score_summary":"1-sentence overall health verdict","special_alert_title":"Gluten Check"|"Exposure & Safety Check","special_alert_status":"SAFE"|"WARNING"|"HIGH HAZARD","special_alert_details":"Gluten/cross-contamination details for food, OR skin absorption, hormone, and inhalation safety details for personal care/household items","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence health hazard explanation"}],"label_fact_check":"Verify front-of-pack marketing claims (e.g. 'natural', 'clean', 'reef-safe', 'hypoallergenic')","store_swaps":["Cleaner Canadian store brand 1","Cleaner Canadian store brand 2"],"diy_recipe":{"title":"Simple DIY Alternative","steps":"Practical homemade recipe if applicable"}}`;
+const SYS = "You are a toxicologist, cosmetic chemist, nutritionist, and Canadian health & allergen specialist (Health Canada / CFIA standards). " +
+"First, accurately identify the exact product from the label photo, ingredient list, or UPC/EAN barcode—never guess a food item if the barcode or ingredients belong to shampoo, conditioner, sunblock, lotion, makeup, soap, or a household cleaner. " +
+"Classify category as one of: Food & Beverage, Personal Care & Hair, Sunblock & Skincare, or Household & Cleaning. " +
+"Evaluate health hazards specific to how the product is used: " +
+"For Food & Beverage: ultra-processed additives, synthetic dyes, trans fats, excess sodium/sugar, endocrine disruptors, and CFIA gluten/allergen risks. " +
+"For Personal Care, Hair, Sunblock & Household items: endocrine/hormone disruptors (parabens, phthalates, oxybenzone, octinoxate, triclosan), formaldehyde releasers (DMDM hydantoin, quaternium-15), harsh sulfates (SLS/SLES), synthetic fragrance/parfum allergens, PFAS, VOCs, and skin/lung irritants. " +
+"Return ONLY valid JSON with these exact keys: category, product_name, score (0-100 integer), score_summary, special_alert_title, special_alert_status (SAFE or WARNING or HIGH HAZARD), special_alert_details, flagged_ingredients (list of objects with name, risk, reason), label_fact_check, store_swaps (list of strings), diy_recipe (object with title and steps).";
 
-async function runAnalysis({ text = "", imgDataUrl = "" }) {
+async function runAnalysis(opts) {
+  const text = opts.text || "";
+  const imgDataUrl = opts.imgDataUrl || "";
   const apiKey = getKey();
+
   if (!apiKey) {
+    status("Tap the gear icon (⚙) at the top right to add your free AI API key first.", "err");
+    openSettingsModal();
+    return;
+  }
+
+  $("results").innerHTML = "";
+  status("Identifying product & analyzing health hazards...");
+
+  try {
+    let rawJsonText = "";
+
+    if (apiKey.startsWith("AIza")) {
+      const parts = Array.of({ text: text || "Identify this product and analyze all ingredients for health hazards." });
+      if (imgDataUrl) {
+        const splitData = imgDataUrl.split(",");
