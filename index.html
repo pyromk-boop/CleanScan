@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0B3D2E">
-  <title>CleanScan v5 - Gluten & Toxin Label Scanner</title>
+  <title>CleanScan - Gluten & Toxin Label Scanner</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
@@ -288,26 +288,23 @@
   <!-- Camera Barcode Scanner Dialog -->
   <dialog id="scannerDialog" style="max-width:550px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <h2 style="margin:0; font-size:18px;">Point camera at barcode</h2>
-      <button type="button" class="btn-sm" onclick="flipFacingMode()" style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:6px 12px; font-weight:bold;">
-        🔄 Switch Camera (Rear/Selfie)
-      </button>
+      <h2 style="margin:0; font-size:18px;">📸 Barcode Scanner (Rear Camera)</h2>
     </div>
     <div style="margin-bottom:10px;">
       <select id="cameraSelect" onchange="switchCamera()">
-        <option value="">Auto-detect Rear Camera (Environment)</option>
+        <option value="">Auto Rear Camera (Environment)</option>
       </select>
     </div>
     <div id="reader-container">
       <div id="reader"></div>
     </div>
     <div class="row" style="margin-top:12px;">
-      <button type="button" id="torchBtn" style="flex:1; display:none;" onclick="toggleTorch()">🔦 Flashlight On</button>
-      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Cancel</button>
+      <button type="button" id="torchBtn" style="flex:1; background:#fff8e1; border-color:#ffa000; color:#b78103;" onclick="toggleTorch()">🔦 Light / Flashlight On</button>
+      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Close</button>
     </div>
     <p class="hint" style="text-align:center; margin-top:8px;">
       💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.<br>
-      If selfie camera opens, tap <strong>🔄 Switch Camera</strong> or choose <strong>📷 Rear Camera</strong> above.
+      Tap <strong>🔦 Light / Flashlight On</strong> if scanning in dim or dark places.
     </p>
   </dialog>
 
@@ -449,9 +446,9 @@
       else if (cleanCode.length === 13 && cleanCode.startsWith('0')) candidates.push(cleanCode.substring(1));
 
       const databases = [
-        { name: 'Open Beauty Facts', host: 'world.openbeautyfacts.org' },
-        { name: 'Open Food Facts', host: 'world.openfoodfacts.org' },
-        { name: 'Open Products Facts', host: 'world.openproductsfacts.org' }
+        { name: 'Open Beauty Facts', host: 'world.openbeauty' + 'facts.org' },
+        { name: 'Open Food Facts', host: 'world.openfood' + 'facts.org' },
+        { name: 'Open Products Facts', host: 'world.openproducts' + 'facts.org' }
       ];
 
       for (const db of databases) {
@@ -467,25 +464,33 @@
               const brand = product.brands || 'Unknown Brand';
               const ingredients = product.ingredients_text || product.ingredients_text_en || product.ingredients_text_with_allergens || '';
               
+              const localData = { name, brand, ingredients, sourceName: db.name };
+
               if (getKey()) {
-                runAiAnalysis({ text: `Product Name: ${name}\nBrand: ${brand}\nBarcode: ${code}\nIngredients: ${ingredients}` });
+                runAiAnalysis({
+                  text: `Product Name: ${name}\nBrand: ${brand}\nBarcode: ${code}\nIngredients: ${ingredients}`,
+                  localData: localData
+                });
               } else {
                 renderLocalAnalysis(name, brand, ingredients, db.name);
               }
               return;
             }
-          } catch (err) { console.warn('Database error:', err); }
+          } catch (err) { console.warn('Database fetch error:', err); }
         }
       }
 
       // Fallback if not found in open databases
       const key = getKey();
       if (key) {
-        status("Barcode not in open database. Requesting AI web lookup for UPC " + cleanCode + "...");
-        runAiAnalysis({ text: "UPC Barcode: " + cleanCode });
+        status("Barcode not in open database. Querying AI web lookup for UPC " + cleanCode + "...");
+        runAiAnalysis({
+          text: "UPC Barcode: " + cleanCode,
+          localData: { name: "Scanned Barcode: " + cleanCode, brand: "Database Lookup", ingredients: "", sourceName: "AI Search" }
+        });
       } else {
-        const contribUrl = 'https://' + 'world.openbeautyfacts.org' + '/cgi/product.pl?type=add&code=' + cleanCode;
-        status('Barcode <strong>' + cleanCode + '</strong> not found in Open Beauty Facts, Open Food Facts, or Open Products Facts.<br><br>💡 <strong>Head & Shoulders</strong> and cosmetic items belong in <em>Open Beauty Facts</em>. <a href="' + contribUrl + '" target="_blank" style="color:#0B3D2E; font-weight:bold; text-decoration:underline;">Click here to submit this barcode to Open Beauty Facts</a> or add a free AI API Key in Settings ⚙ for automatic web lookup!', "err");
+        const contribUrl = 'https://' + 'world.openbeauty' + 'facts.org/cgi/product.pl?type=add&code=' + cleanCode;
+        status('Barcode <strong>' + cleanCode + '</strong> not found in Open Beauty Facts, Open Food Facts, or Open Products Facts.<br><br>💡 <strong>Head & Shoulders</strong> and cosmetic items belong in <em>Open Beauty Facts</em>. <a href="' + contribUrl + '" target="_blank" style="color:#0B3D2E; font-weight:bold; text-decoration:underline;">Click here to submit this barcode to Open Beauty Facts</a> or paste ingredient text below for instant scan!', "err");
       }
     }
 
@@ -494,22 +499,22 @@
       const text = $('manualText').value.trim();
       if (!text) return;
       if (getKey()) {
-        runAiAnalysis({ text: text });
+        runAiAnalysis({ text: text, localData: { name: "Custom Ingredient List", brand: "User Input", ingredients: text, sourceName: "Local Engine" } });
       } else {
         renderLocalAnalysis("Custom Ingredient List", "User Input", text, "Local Scan Engine");
       }
     }
 
-    // Local Analysis (No API key needed)
-    function renderLocalAnalysis(pName, pBrand, ingredientsText, sourceName) {
+    // Local Analysis (No API key needed / AI error fallback)
+    function renderLocalAnalysis(pName, pBrand, ingredientsText, sourceName, extraNotice = "") {
       status("");
       const glutenTriggers = ['wheat', 'barley', 'rye', 'malt', 'gluten', 'spelt', 'kamut', 'triticale', 'durum', 'semolina'];
-      const ingLower = ingredientsText.toLowerCase();
+      const ingLower = (ingredientsText || '').toLowerCase();
 
       let containsGluten = false;
       let detectedGluten = [];
       glutenTriggers.forEach(trigger => {
-        const regex = new RegExp('\b' + trigger + '\b', 'i');
+        const regex = new RegExp('\\b' + trigger + '\\b', 'i');
         if (regex.test(ingLower)) {
           containsGluten = true;
           if (!detectedGluten.includes(trigger)) detectedGluten.push(trigger);
@@ -519,7 +524,7 @@
       let foundChems = [];
       if (ingredientsText) {
         flaggedChems.forEach(chem => {
-          const regex = new RegExp('\b' + chem, 'i');
+          const regex = new RegExp('\\b' + chem, 'i');
           if (regex.test(ingLower)) foundChems.push(chem);
         });
       }
@@ -537,19 +542,20 @@
       let flagsHtml = foundChems.map(c => `<div class="item" style="border-color:var(--r);"><b>🚫 ${esc(c)} (Flagged Chemical)</b><br>Detected in ingredient list scan against watchlist.</div>`).join('');
       if (!flagsHtml) flagsHtml = `<div class="item" style="border-color:var(--g);"><b>🌿 Clean Scan</b><br>No watchlist chemicals detected.</div>`;
 
-      let highlighted = esc(ingredientsText || "No ingredient text available.");
+      let highlighted = esc(ingredientsText || "No ingredient text available in database entry.");
       glutenTriggers.forEach(t => {
-        const r = new RegExp('\b(' + t + ')\b', 'gi');
+        const r = new RegExp('\\b(' + t + ')\\b', 'gi');
         highlighted = highlighted.replace(r, '<span class="highlight-gluten">$1</span>');
       });
       flaggedChems.forEach(c => {
-        const r = new RegExp('\b(' + c + ')', 'gi');
+        const r = new RegExp('\\b(' + c + ')', 'gi');
         highlighted = highlighted.replace(r, '<span class="highlight-chem">$1</span>');
       });
 
       $('results').innerHTML = `
+        ${extraNotice ? `<div class="item" style="border-color:var(--y); background:var(--ybg); margin-bottom:12px;"><b>ℹ️ Note:</b> ${esc(extraNotice)}</div>` : ''}
         <div class="pname">${esc(pName)}</div>
-        <div class="pbrand">Brand: ${esc(pBrand)} • Database: ${esc(sourceName)}</div>
+        <div class="pbrand">Brand: ${esc(pBrand)} • Source: ${esc(sourceName)}</div>
         <div class="score-container">
           <div class="dial tone-${tColor}">${score}</div>
           <div class="score-text">
@@ -568,13 +574,21 @@
       `;
     }
 
-    // AI Analysis (Gemini / OpenRouter)
+    // AI Analysis (Gemini / OpenRouter) with Graceful Local Fallback on Error
     const SYS = `You are a toxicologist, nutritionist, and celiac/gluten-free specialist (following Canadian CFIA allergen standards). Analyze the product label, ingredients, or UPC barcode provided. Return ONLY valid JSON:
 {"product_name":"Name","brand":"Brand","score":75,"score_summary":"1-sentence verdict","gluten_status":"NO GLUTEN FOUND"|"WARNING"|"CONTAINS GLUTEN","gluten_details":"Gluten & cross-contamination check","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence harm explanation"}],"label_fact_check":"Verify front-of-pack marketing claims","store_swaps":["Cleaner store brand 1","Cleaner store brand 2"],"diy_recipe":{"title":"DIY Alternative","steps":"Practical homemade recipe"}}`;
 
-    async function runAiAnalysis({ text = "", img = "" }) {
+    async function runAiAnalysis({ text = "", img = "", localData = null }) {
       const key = getKey();
-      if (!key) { $('openSettings').click(); return status("Paste your API key in Settings first.", "err"); }
+      if (!key) {
+        if (localData && localData.name) {
+          renderLocalAnalysis(localData.name, localData.brand, localData.ingredients, localData.sourceName);
+        } else {
+          $('openSettings').click();
+          status("Paste your API key in Settings first, or use barcode search for instant offline scan.", "err");
+        }
+        return;
+      }
 
       $('results').innerHTML = "";
       status("Analyzing ingredients, checking gluten & verifying claims...");
@@ -619,7 +633,6 @@
           const parts = [{ text: text || "Analyze this product label image." }];
           if (img) parts.push({ inlineData: { mimeType: "image/jpeg", data: img } });
 
-          // Model fallback array for Google AI Studio API
           const geminiModels = [
             'gemini-2.5-flash',
             'gemini-2.0-flash',
@@ -677,7 +690,7 @@
         const gs = String(r.gluten_status || "").toUpperCase();
         const gt = gs.includes("NO GLUTEN") ? "g" : gs === "WARNING" ? "y" : "r";
 
-        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
+        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(--${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
         const swaps = (r.store_swaps || []).map(x => `<li>${esc(x)}</li>`).join("");
 
         let diyHtml = "";
@@ -706,54 +719,59 @@
           ${diyHtml}
         `;
       } catch (err) {
-        status("AI Analysis Error: " + err.message, "err");
+        console.warn("AI Analysis Error:", err);
+        if (localData && localData.name) {
+          renderLocalAnalysis(localData.name, localData.brand, localData.ingredients, localData.sourceName, "AI key error (" + err.message + "). Displaying instant offline scan instead.");
+        } else {
+          status("AI Analysis Error: " + err.message + "<br><small>Tip: Barcode lookups work without AI!</small>", "err");
+        }
       }
     }
 
-    // Camera Barcode Scanner Modal with Rear Camera Preference & Camera Switching
+    // Camera Barcode Scanner Modal (Rear Camera Only & Hardware Auto-Focus & Light)
     let html5QrCode = null;
     let isScanning = false;
     let torchOn = false;
-    let currentFacingMode = "environment"; // Default to back/rear camera
 
     async function openCameraModal() {
       const dialog = $('scannerDialog');
       dialog.showModal();
       
-      if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader", {
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        });
+      }
 
       startScanner();
-    }
-
-    function flipFacingMode() {
-      currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
-      $('cameraSelect').value = ""; // reset exact device ID selection so facingMode applies
-      if (html5QrCode && isScanning) {
-        html5QrCode.stop().then(() => startScanner()).catch(() => startScanner());
-      } else {
-        startScanner();
-      }
     }
 
     function startScanner() {
       const select = $('cameraSelect');
       const cameraId = select.value || null;
 
-      // Clean constraint configuration
+      // Strictly lock to rear camera (facingMode: environment)
       let cameraConfig;
       if (cameraId) {
         cameraConfig = { deviceId: { exact: cameraId } };
       } else {
-        cameraConfig = { facingMode: currentFacingMode };
+        cameraConfig = { facingMode: "environment" };
       }
 
       const qrConfig = {
-        fps: 15,
+        fps: 20,
         qrbox: (w, h) => ({
           width: Math.max(220, Math.min(340, Math.floor(w * 0.88))),
           height: Math.max(120, Math.min(180, Math.floor(h * 0.45)))
         }),
-        aspectRatio: 1.777778
+        aspectRatio: 1.777778,
+        videoConstraints: {
+          facingMode: "environment",
+          focusMode: "continuous",
+          advanced: [{ focusMode: "continuous" }]
+        }
       };
 
       html5QrCode.start(cameraConfig, qrConfig, onScanSuccess, () => {})
@@ -761,29 +779,19 @@
           isScanning = true;
           try {
             const track = html5QrCode.getRunningTrack();
-            if (track && track.getCapabilities) {
-              const caps = track.getCapabilities();
-              if (caps.focusMode && caps.focusMode.includes("continuous")) {
-                track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
-              }
+            if (track && track.applyConstraints) {
+              track.applyConstraints({
+                advanced: [{ focusMode: "continuous" }]
+              }).catch(() => {});
             }
           } catch (e) {}
-          checkTorchSupport();
           populateCameraDropdown();
         })
         .catch(err => {
-          console.warn("Camera start failed with constraints, retrying fallback:", err);
-          if (!cameraId && currentFacingMode === "environment") {
-            // Fallback attempt with simple string
-            html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess, () => {})
-              .then(() => { isScanning = true; populateCameraDropdown(); })
-              .catch(e => {
-                // Second fallback to user facingMode if environment is unavailable
-                html5QrCode.start({ facingMode: "user" }, qrConfig, onScanSuccess, () => {})
-                  .then(() => { isScanning = true; populateCameraDropdown(); })
-                  .catch(err2 => console.error("Final camera error:", err2));
-              });
-          }
+          console.warn("Camera start failed, trying simple environment fallback:", err);
+          html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess, () => {})
+            .then(() => { isScanning = true; populateCameraDropdown(); })
+            .catch(e => console.error("Final camera error:", e));
         });
     }
 
@@ -793,18 +801,17 @@
         const select = $('cameraSelect');
         if (devices && devices.length) {
           const currentVal = select.value;
-          select.innerHTML = '<option value="">Auto Rear Camera (' + (currentFacingMode === 'environment' ? 'Rear' : 'Front') + ')</option>';
+          select.innerHTML = '<option value="">Auto Rear Camera (Environment)</option>';
           devices.forEach((d, idx) => {
+            const labelLower = (d.label || '').toLowerCase();
+            // FILTER OUT FRONT / SELFIE / FACETIME CAMERAS
+            if (labelLower.includes('front') || labelLower.includes('user') || labelLower.includes('selfie') || labelLower.includes('facetime')) {
+              return; // Skip front cameras completely
+            }
             const opt = document.createElement('option');
             opt.value = d.id;
-            const labelLower = (d.label || '').toLowerCase();
-            let labelText = d.label || ('Camera ' + (idx + 1));
-            if (labelLower.includes('back') || labelLower.includes('rear') || labelLower.includes('environment') || labelLower.includes('outer') || labelLower.includes('0')) {
-              labelText += ' 📷 (Rear)';
-            } else if (labelLower.includes('front') || labelLower.includes('user') || labelLower.includes('selfie') || labelLower.includes('facetime') || labelLower.includes('1')) {
-              labelText += ' 🤳 (Front/Selfie)';
-            }
-            opt.innerText = labelText;
+            let labelText = d.label || ('Rear Camera ' + (idx + 1));
+            opt.innerText = labelText + ' 📷';
             select.appendChild(opt);
           });
           if (currentVal) select.value = currentVal;
@@ -818,24 +825,25 @@
       }
     }
 
-    function checkTorchSupport() {
-      try {
-        const track = html5QrCode.getRunningTrack();
-        const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-        if (capabilities.torch) {
-          $('torchBtn').style.display = 'inline-flex';
-        }
-      } catch (e) {}
-    }
-
     function toggleTorch() {
       if (!html5QrCode || !isScanning) return;
       try {
         const track = html5QrCode.getRunningTrack();
+        if (!track) return;
         torchOn = !torchOn;
-        track.applyConstraints({ advanced: [{ torch: torchOn }] });
-        $('torchBtn').innerText = torchOn ? '🔦 Flashlight Off' : '🔦 Flashlight On';
-      } catch (e) {}
+        track.applyConstraints({ advanced: [{ torch: torchOn }] })
+          .then(() => {
+            $('torchBtn').innerText = torchOn ? '🔦 Light / Flashlight Off' : '🔦 Light / Flashlight On';
+          })
+          .catch(err => {
+            console.warn("Torch constraint error:", err);
+            alert("Flashlight/Light is not supported on this camera device or browser.");
+            torchOn = false;
+            $('torchBtn').innerText = '🔦 Light / Flashlight On';
+          });
+      } catch (e) {
+        alert("Flashlight/Light not supported on this camera stream.");
+      }
     }
 
     function onScanSuccess(decodedText) {
@@ -851,7 +859,7 @@
       $('scannerDialog').close();
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
       initWatchlist();
     });
   </script>
