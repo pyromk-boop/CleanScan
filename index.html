@@ -195,7 +195,16 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.25);
     }
     dialog::backdrop { background: rgba(0,0,0,0.55); }
-    #reader-container { position: relative; border-radius: 14px; overflow: hidden; background: #000; margin-top: 10px; }
+    #reader-container { position: relative; border-radius: 14px; overflow: hidden; background: #000; margin-top: 10px; transition: all 0.3s ease; }
+    .screen-torch-active {
+      background: #ffffff !important;
+      box-shadow: 0 0 0 9999px #ffffff, 0 0 35px #ffffff !important;
+      border: 8px solid #ffffff !important;
+    }
+    #scannerDialog.screen-torch-active {
+      background: #ffffff !important;
+      border-color: #ffffff !important;
+    }
     #reader { width: 100%; min-height: 240px; }
 
     
@@ -292,9 +301,19 @@
       Barcode lookups, camera scanning, ingredient analysis, and all 5 Safety Databases work 100% free with NO API key required.
     </div>
     <p class="hint" style="margin-top:0;">
-      <strong>Optional:</strong> Paste a free Google AI Studio key (from <code>aistudio.google.com</code>) if you want AI vision to read paper label photos or generate custom recipes:
+      <strong>Optional AI Studio Key & Model Choice:</strong> Paste a free key from <code>aistudio.google.com</code> for AI paper label OCR:
     </p>
     <input type="password" id="keyInput" placeholder="Paste optional Gemini key (e.g. AIzaSy...)" style="margin-top:10px;" />
+    
+    <label style="font-size:13px; font-weight:600; margin-top:12px; display:block; color:var(--ink);">Gemini API Model Target:</label>
+    <select id="modelSelect" style="margin-top:4px;" onchange="saveSelectedModel()">
+      <option value="auto">Auto-Detect Active Model (Recommended)</option>
+      <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & Accurate)</option>
+      <option value="gemini-2.0-flash">gemini-2.0-flash (High Speed)</option>
+      <option value="gemini-2.5-pro">gemini-2.5-pro (Deep Analysis)</option>
+      <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest</option>
+    </select>
+
     <div class="row" style="margin-top:14px;">
       <button type="button" class="primary" style="flex:1;" onclick="saveApiKey()">Save Key</button>
       <button type="button" onclick="clearApiKey()">Remove</button>
@@ -307,8 +326,11 @@
   <dialog id="scannerDialog" style="max-width:550px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
       <h2 style="margin:0; font-size:18px;">📸 Barcode Scanner (Rear Camera)</h2>
+      <button type="button" class="btn-sm" onclick="triggerRefocus()" style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:6px 12px; font-weight:bold;">
+        🎯 Refocus Lens
+      </button>
     </div>
-    <div style="margin-bottom:10px;">
+    <div style="margin-bottom:8px;">
       <select id="cameraSelect" onchange="switchCamera()">
         <option value="">Auto Rear Camera (Environment)</option>
       </select>
@@ -316,13 +338,19 @@
     <div id="reader-container">
       <div id="reader"></div>
     </div>
+    <div style="display:flex; gap:6px; margin-top:10px; align-items:center; justify-content:center; flex-wrap:wrap;">
+      <span style="font-size:13px; font-weight:bold; color:var(--ink);">Camera Zoom:</span>
+      <button type="button" class="btn-sm" onclick="setZoom(1.0)">1.0x</button>
+      <button type="button" class="btn-sm" onclick="setZoom(1.5)">1.5x 🔍</button>
+      <button type="button" class="btn-sm" onclick="setZoom(2.0)">2.0x 🔍</button>
+    </div>
     <div class="row" style="margin-top:12px;">
       <button type="button" id="torchBtn" style="flex:1; background:#fff8e1; border-color:#ffa000; color:#b78103;" onclick="toggleTorch()">🔦 Light / Flashlight On</button>
-      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Close</button>
+      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Close Scanner</button>
     </div>
     <p class="hint" style="text-align:center; margin-top:8px;">
-      💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.<br>
-      Tap <strong>🔦 Light / Flashlight On</strong> if scanning in dim or dark places.
+      📱 <strong>Auto-Focus Distance Tip:</strong> Hold phone 10–14 inches (25–35 cm) away.<br>
+      If barcode is small or blurry up close, tap <strong>1.5x 🔍</strong> or <strong>2.0x 🔍</strong> Zoom!
     </p>
   </dialog>
 
@@ -444,9 +472,13 @@
       el.innerHTML = kind ? msg : '<span class="spin"></span>' + msg;
     }
 
-    // Settings
+    // Settings & Model Selection
+    const M_KEY = "cleanscan_model_choice";
+    const getSavedModel = () => { try { return localStorage.getItem(M_KEY) || "auto"; } catch (e) { return "auto"; } };
+
     $('openSettings').onclick = () => {
       $('keyInput').value = getKey();
+      $('modelSelect').value = getSavedModel();
       $('keyMsg').textContent = getKey() ? "Key saved on device." : "No API key saved.";
       $('settingsDialog').showModal();
     };
@@ -456,10 +488,16 @@
       if (!v) return;
       try {
         localStorage.setItem(K, v);
+        saveSelectedModel();
         $('keyMsg').textContent = "Saved successfully!";
       } catch (e) {
         $('keyMsg').textContent = "Storage blocked by browser.";
       }
+    }
+
+    function saveSelectedModel() {
+      const m = $('modelSelect').value || "auto";
+      try { localStorage.setItem(M_KEY, m); } catch (e) {}
     }
 
     function clearApiKey() {
