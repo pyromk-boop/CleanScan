@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0B3D2E">
-  <title>CleanScan v9 - Gluten & Ingredient Safety Database Scanner</title>
+  <title>CleanScan - Gluten & Toxin Label Scanner</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
@@ -198,16 +198,19 @@
     #reader-container { position: relative; border-radius: 14px; overflow: hidden; background: #000; margin-top: 10px; }
     #reader { width: 100%; min-height: 240px; }
 
+    
+    .db-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-right: 4px; }
+    .db-iarc { background: #fde0dd; color: #b3261e; }
+    .db-cspi { background: #ffefc2; color: #8a5a00; }
+    .db-ewg { background: #ddf4e4; color: #0f7b3f; }
+    .db-canada { background: #e1f5fe; color: #0277bd; }
+    .db-fda { background: #f3e5f5; color: #7b1fa2; }
     .chem-tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .screen-torch-active { box-shadow: 0 0 0 100vmax rgba(255, 255, 255, 0.95) !important; outline: 20px solid white !important; }
+
     .chem-tag { background: #eeeeee; padding: 4px 10px; border-radius: 16px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
     .chem-tag button { min-height: unset; padding: 0; border: none; background: none; color: #888; font-weight: bold; cursor: pointer; }
     .footer { text-align: center; font-size: 12px; color: var(--mute); margin-top: 28px; line-height: 1.5; }
-  
-    #reader-container.screen-torch-active {
-      box-shadow: 0 0 0 9999px rgba(255, 255, 255, 0.95), 0 0 50px #ffffff;
-      border: 6px solid #ffffff;
-    }
-
   </style>
 </head>
 <body>
@@ -251,47 +254,27 @@
     <img id="preview" alt="Captured label">
     <div id="results"></div>
 
-    <!-- Watchlist Manager Accordion -->
+    <!-- Watchlist & Safety Database Registry Accordion -->
     <section class="card" style="margin-top:20px;">
       <h2 style="cursor:pointer;" onclick="toggleWatchlist()">
-        ⚙️ Chemical Watchlist (<span id="chemCount">0</span>)
+        📚 Safety Databases & Hazard Index (<span id="chemCount">0</span>)
         <span id="watchArrow" style="margin-left:auto;">▼</span>
       </h2>
       <div id="watchBody" style="display:none; margin-top:10px;">
-        <p class="hint" style="margin-bottom:10px;">Flagged chemicals analyzed in cosmetic & personal care ingredient lists:</p>
+        <p class="hint" style="margin-bottom:10px;">
+          Ingested & cosmetic chemicals cross-referenced with EWG Food Scores, FooDB, CSPI Chemical Cuisine, IARC Carcinogen Monographs, Health Canada Contaminants & FDA Review Lists:
+        </p>
+        <div class="row" style="margin-bottom:10px;">
+          <input type="text" id="dbSearchInput" placeholder="Filter hazard database (e.g. titanium, paraben, red 3)..." oninput="renderWatchlist()" />
+        </div>
         <div id="chemTags" class="chem-tag-cloud"></div>
         <div class="row" style="margin-top:10px;">
-          <input type="text" id="newChemInput" placeholder="Add chemical (e.g. titanium dioxide)" />
+          <input type="text" id="newChemInput" placeholder="Add custom chemical term" />
           <button type="button" class="btn-sm" onclick="addChemical()">Add</button>
         </div>
         <button type="button" class="btn-sm" style="margin-top:10px; width:100%; background:#f0f0f0;" onclick="resetWatchlist()">
-          Reset Default Watchlist
+          Reset Default Database Index
         </button>
-      </div>
-    </section>
-
-    
-    <!-- Safety Databases Reference Index -->
-    <section class="card" style="margin-top:20px;">
-      <h2 style="cursor:pointer;" onclick="toggleDbIndex()">
-        📚 Safety Databases & Hazard Index
-        <span id="dbIndexArrow" style="margin-left:auto;">▼</span>
-      </h2>
-      <div id="dbIndexBody" style="display:none; margin-top:10px;">
-        <p class="hint" style="margin-bottom:12px;">
-          Cross-reference ingredient safety profiles against <strong>EWG's Food Scores & Skin Deep</strong>, <strong>FooDB</strong>, <strong>CSPI Chemical Cuisine</strong>, <strong>IARC Monographs</strong>, <strong>Health Canada Contaminants</strong>, and <strong>FDA Select Chemicals</strong>.
-        </p>
-        <div class="row" style="margin-bottom:10px; flex-wrap:wrap; gap:6px;">
-          <input type="search" id="dbSearchInput" placeholder="Search ingredient (e.g. titanium, bha, red 3, lead, paraben)..." oninput="filterDbIndex()" style="min-height:40px; font-size:14px;" />
-        </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
-          <button type="button" class="btn-sm" onclick="filterDbTag('ALL')" style="background:#0B3D2E; color:#fff;">All Databases</button>
-          <button type="button" class="btn-sm" onclick="filterDbTag('IARC')" style="background:#fde0dd; color:#b3261e; border:1px solid #ffcdd2;">IARC Carcinogens</button>
-          <button type="button" class="btn-sm" onclick="filterDbTag('CSPI')" style="background:#ffefc2; color:#8a5a00; border:1px solid #ffe0b2;">CSPI / FooDB</button>
-          <button type="button" class="btn-sm" onclick="filterDbTag('FDA')" style="background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9;">Health Canada / FDA</button>
-          <button type="button" class="btn-sm" onclick="filterDbTag('EWG')" style="background:#e0f2f1; color:#00695c; border:1px solid #b2dfdb;">EWG Skin Deep</button>
-        </div>
-        <div id="dbRegistryList" style="max-height:300px; overflow-y:auto; padding-right:4px;"></div>
       </div>
     </section>
 
@@ -301,13 +284,17 @@
     </div>
   </main>
 
-  <!-- Settings Dialog (API Keys) -->
+  <!-- Settings Dialog -->
   <dialog id="settingsDialog">
-    <h2 style="margin-top:0;">Free AI API Key</h2>
+    <h2 style="margin-top:0;">⚙ App Settings & Optional AI Key</h2>
+    <div style="background:#e8f5e9; color:#1b5e20; padding:10px 12px; border-radius:10px; font-size:13px; margin-bottom:12px; border:1px solid #a5d6a7;">
+      <strong>✅ No API Key Needed for Scans!</strong><br>
+      Barcode lookups, camera scanning, ingredient analysis, and all 5 Safety Databases work 100% free with NO API key required.
+    </div>
     <p class="hint" style="margin-top:0;">
-      Paste an optional Google AI Studio (Gemini) or OpenRouter key for AI photo OCR, claim fact-checks, store brand swaps, and DIY recipes!
+      <strong>Optional:</strong> Paste a free Google AI Studio key (from <code>aistudio.google.com</code>) if you want AI vision to read paper label photos or generate custom recipes:
     </p>
-    <input type="password" id="keyInput" placeholder="Paste API key (AI Studio or OpenRouter)" style="margin-top:10px;" />
+    <input type="password" id="keyInput" placeholder="Paste optional Gemini key (e.g. AIzaSy...)" style="margin-top:10px;" />
     <div class="row" style="margin-top:14px;">
       <button type="button" class="primary" style="flex:1;" onclick="saveApiKey()">Save Key</button>
       <button type="button" onclick="clearApiKey()">Remove</button>
@@ -317,13 +304,9 @@
   </dialog>
 
   <!-- Camera Barcode Scanner Dialog -->
-    <!-- Camera Barcode Scanner Dialog -->
   <dialog id="scannerDialog" style="max-width:550px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <h2 style="margin:0; font-size:18px;">📷 Scan Barcode (Rear Camera)</h2>
-      <button type="button" class="btn-sm" onclick="triggerRefocus()" style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; padding:6px 12px; font-weight:bold;">
-        🎯 Refocus
-      </button>
+      <h2 style="margin:0; font-size:18px;">📸 Barcode Scanner (Rear Camera)</h2>
     </div>
     <div style="margin-bottom:10px;">
       <select id="cameraSelect" onchange="switchCamera()">
@@ -334,12 +317,12 @@
       <div id="reader"></div>
     </div>
     <div class="row" style="margin-top:12px;">
-      <button type="button" id="torchBtn" style="flex:1;" onclick="toggleTorch()">🔦 Light / Flashlight On</button>
-      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Close Scanner</button>
+      <button type="button" id="torchBtn" style="flex:1; background:#fff8e1; border-color:#ffa000; color:#b78103;" onclick="toggleTorch()">🔦 Light / Flashlight On</button>
+      <button type="button" class="primary" style="flex:1;" onclick="closeCameraModal()">Close</button>
     </div>
     <p class="hint" style="text-align:center; margin-top:8px;">
-      💡 Hold phone 8–12 inches (20–30 cm) away.<br>
-      Tapping <strong>🔦 Light On</strong> illuminates dark rooms with LED flash or bright screen light.
+      💡 Hold phone 8–12 inches (20–30 cm) away for auto-focus.<br>
+      Tap <strong>🔦 Light / Flashlight On</strong> if scanning in dim or dark places.
     </p>
   </dialog>
 
@@ -351,76 +334,46 @@
     const tone = n => n >= 70 ? "g" : n >= 40 ? "y" : "r";
 
     // Watchlist chemicals
-    const defaultChems = ['paraben', 'methylparaben', 'propylparaben', 'butylparaben', 'ethylparaben', 'sulfate', 'sodium lauryl sulfate', 'sls', 'sodium laureth sulfate', 'sles', 'ammonium lauryl sulfate', 'phthalate', 'dep', 'dbp', 'dehp', 'oxybenzone', 'benzophenone', 'triclosan', 'fragrance', 'parfum', 'synthetic fragrance'];
-    let flaggedChems = [...defaultChems];
-
     
-    // Multi-Database Ingredient Safety & Hazard Registry (EWG, CSPI, IARC, Health Canada, FDA)
     const safetyDatabaseRegistry = [
-      // IARC Carcinogenicity Monographs
-      { term: 'titanium dioxide', db: 'IARC Monographs', badge: 'IARC Group 2B', level: 'r', reason: 'Classified by IARC as Group 2B (Possibly Carcinogenic to humans via inhalation/ingestion concerns).' },
-      { term: 'bha', db: 'IARC / CSPI / FDA', badge: 'IARC 2B • CSPI Avoid', level: 'r', reason: 'Butylated Hydroxyanisole: IARC Group 2B possible carcinogen; under active FDA safety review.' },
-      { term: 'butylated hydroxyanisole', db: 'IARC / CSPI / FDA', badge: 'IARC 2B • CSPI Avoid', level: 'r', reason: 'IARC Group 2B possible carcinogen; flagged by CSPI for potential endocrine disruption.' },
-      { term: 'red 3', db: 'FDA / IARC', badge: 'FDA Review • IARC 2B', level: 'r', reason: 'Erythrosine: Linked to thyroid tumors in animal studies; under FDA & state restriction review.' },
-      { term: 'erythrosine', db: 'FDA / IARC', badge: 'FDA Review • IARC 2B', level: 'r', reason: 'FD&C Red No. 3: IARC Group 2B; undergoing FDA & international safety reassessment.' },
-      { term: 'formaldehyde', db: 'IARC Monographs', badge: 'IARC Group 1 Carcinogen', level: 'r', reason: 'Classified as Group 1 Carcinogenic to humans by IARC; severe allergen & respiratory irritant.' },
-      { term: 'dmdm hydantoin', db: 'EWG / IARC', badge: 'Formaldehyde Releaser', level: 'r', reason: 'Formaldehyde-releasing preservative flagged by EWG and health authorities.' },
-      { term: 'quaternium-15', db: 'EWG / IARC', badge: 'Formaldehyde Releaser', level: 'r', reason: 'Formaldehyde-releasing preservative; high allergenic potential.' },
-      { term: 'coal tar', db: 'IARC Monographs', badge: 'IARC Group 1 Carcinogen', level: 'r', reason: 'Known human carcinogen in cosmetics and hair dyes.' },
-
-      // CSPI Chemical Cuisine & FooDB
-      { term: 'brominated vegetable oil', db: 'CSPI / FDA', badge: 'CSPI Avoid • FDA Ban Review', level: 'r', reason: 'BVO: Bioaccumulative bromine compound; FDA proposed revoking authorization due to thyroid toxicity.' },
-      { term: 'bvo', db: 'CSPI / FDA', badge: 'CSPI Avoid • FDA Ban Review', level: 'r', reason: 'Brominated Vegetable Oil: Flagged for potential organ accumulation and tissue toxicity.' },
-      { term: 'potassium bromate', db: 'CSPI / IARC', badge: 'IARC Group 2B • CSPI Avoid', level: 'r', reason: 'Dough conditioner classified as IARC 2B possible carcinogen; banned in Canada, EU, and UK.' },
-      { term: 'propyl gallate', db: 'CSPI / FooDB', badge: 'CSPI Caution • FooDB Flag', level: 'y', reason: 'Antioxidant preservative associated with potential endocrine disruption in animal studies.' },
-      { term: 'sodium nitrite', db: 'CSPI / IARC', badge: 'CSPI Avoid • IARC 2A', level: 'r', reason: 'Forms nitrosamines in human digestive tract; classified by IARC as 2A probable carcinogen.' },
-      { term: 'sodium nitrate', db: 'CSPI / IARC', badge: 'CSPI Avoid • IARC 2A', level: 'r', reason: 'Preservative in processed meats converting to carcinogenic nitrosamine compounds.' },
-      { term: 'tbhq', db: 'CSPI / EWG', badge: 'CSPI Caution • EWG High', level: 'y', reason: 'Tertiary Butylhydroquinone: Synthetic antioxidant linked to immune cell alteration in lab trials.' },
-      { term: 'bht', db: 'CSPI / FDA', badge: 'CSPI Caution • FDA Review', level: 'y', reason: 'Butylated Hydroxytoluene: Synthetic preservative under FDA safety review for hormone mimicry.' },
-      { term: 'butylated hydroxytoluene', db: 'CSPI / FDA', badge: 'CSPI Caution • FDA Review', level: 'y', reason: 'Under safety review regarding potential endocrine disruption.' },
-      { term: 'aspartame', db: 'IARC / CSPI', badge: 'IARC Group 2B • CSPI Caution', level: 'y', reason: 'Classified in 2023 by WHO/IARC as Group 2B (Possibly Carcinogenic to humans).' },
-      { term: 'yellow 5', db: 'CSPI Chemical Cuisine', badge: 'CSPI Caution / Allergen', level: 'y', reason: 'Tartrazine: Synthetic food dye linked to hyperactivity in children and hypersensitivity reactions.' },
-      { term: 'tartrazine', db: 'CSPI Chemical Cuisine', badge: 'CSPI Caution / Allergen', level: 'y', reason: 'Artificial food color associated with allergic reactions and behavioral sensitivity.' },
-      { term: 'yellow 6', db: 'CSPI Chemical Cuisine', badge: 'CSPI Caution', level: 'y', reason: 'Sunset Yellow FCF: Synthetic dye flagged by CSPI for potential allergic sensitivities.' },
-      { term: 'red 40', db: 'CSPI / FooDB', badge: 'CSPI Caution', level: 'y', reason: 'Allura Red AC: Petroleum-derived dye monitored for behavioral effects in sensitive individuals.' },
-
-      // Health Canada Contaminants & FDA Select Chemicals
-      { term: 'lead', db: 'Health Canada / FDA', badge: 'Health Canada Contaminant', level: 'r', reason: 'Heavy metal contaminant with zero safe threshold for neurodevelopmental exposure.' },
-      { term: 'arsenic', db: 'Health Canada / FDA', badge: 'Health Canada Contaminant', level: 'r', reason: 'Toxic metalloid contaminant strictly regulated under Health Canada food safety limits.' },
-      { term: 'mercury', db: 'Health Canada / FDA', badge: 'Health Canada Contaminant', level: 'r', reason: 'Bioaccumulative heavy metal contaminant regulated in fish and agricultural products.' },
-      { term: 'cadmium', db: 'Health Canada / FDA', badge: 'Health Canada Contaminant', level: 'r', reason: 'Toxic heavy metal listed under Health Canada chemical contaminants threshold.' },
-      { term: 'pfas', db: 'FDA / EWG', badge: 'FDA Review • Forever Chemical', level: 'r', reason: 'Per- and polyfluoroalkyl substances: Persistent bioaccumulative chemicals under FDA monitoring.' },
-      { term: 'perfluoroalkyl', db: 'FDA / EWG', badge: 'FDA Review • Forever Chemical', level: 'r', reason: 'Persistent industrial chemical residue undergoing environmental & food packaging review.' },
-      { term: 'propylparaben', db: 'FDA / EWG', badge: 'FDA Safety Review • EWG High', level: 'r', reason: 'Endocrine-disrupting preservative currently undergoing active safety reassessment by the FDA.' },
-
-      // EWG Skin Deep & Cosmetic Watchlist
-      { term: 'paraben', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'r', reason: 'Preservative family associated with estrogen mimicry and hormone system disruption.' },
-      { term: 'methylparaben', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'r', reason: 'Synthetic preservative linked to skin irritation and potential endocrine disruption.' },
-      { term: 'butylparaben', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'r', reason: 'High-potency paraben with documented estrogenic activity in laboratory assays.' },
-      { term: 'ethylparaben', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'r', reason: 'Paraben preservative flagged for skin sensitization and bioaccumulation.' },
-      { term: 'sulfate', db: 'EWG Skin Deep', badge: 'EWG Irritant', level: 'y', reason: 'Harsh surfactant family that strips natural moisture barrier and causes irritation.' },
-      { term: 'sodium lauryl sulfate', db: 'EWG Skin Deep', badge: 'EWG High Irritant', level: 'r', reason: 'SLS: Strong detergent surfactant associated with epidermal damage and ocular irritation.' },
-      { term: 'sls', db: 'EWG Skin Deep', badge: 'EWG High Irritant', level: 'r', reason: 'Sodium Lauryl Sulfate: Harsh foaming agent flagged for mucosal and cutaneous irritation.' },
-      { term: 'sodium laureth sulfate', db: 'EWG Skin Deep', badge: 'EWG 1,4-Dioxane Risk', level: 'y', reason: 'SLES: Ethoxylated surfactant with potential 1,4-dioxane impurity contamination.' },
-      { term: 'sles', db: 'EWG Skin Deep', badge: 'EWG 1,4-Dioxane Risk', level: 'y', reason: 'Sodium Laureth Sulfate: Processed with ethylene oxide, posing trace contaminant risks.' },
-      { term: 'phthalate', db: 'EWG / Health Canada', badge: 'EWG High Hazard', level: 'r', reason: 'Plasticizer and fragrance fixative family linked to reproductive toxicity and endocrine disruption.' },
-      { term: 'dep', db: 'EWG Skin Deep', badge: 'EWG Endocrine Flag', level: 'y', reason: 'Diethyl Phthalate: Common cosmetic solvent and fragrance fixative.' },
-      { term: 'dbp', db: 'EWG / Health Canada', badge: 'Prohibited / EWG High', level: 'r', reason: 'Dibutyl Phthalate: Toxic to reproduction; prohibited in cosmetic formulations in Canada & EU.' },
-      { term: 'oxybenzone', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'r', reason: 'Chemical sunscreen filter with high skin absorption rate and endocrine mimicry.' },
-      { term: 'benzophenone', db: 'IARC / EWG', badge: 'IARC Group 2B • EWG High', level: 'r', reason: 'UV filter classified as IARC 2B possible carcinogen and endocrine disruptor.' },
-      { term: 'triclosan', db: 'FDA / EWG', badge: 'FDA Banned Antimicrobial', level: 'r', reason: 'Antimicrobial agent banned by FDA in consumer soaps due to thyroid disruption and resistance.' },
-      { term: 'fragrance', db: 'EWG Skin Deep', badge: 'EWG High Allergen', level: 'y', reason: 'Trade-secret mixture often containing undisclosed phthalates and allergen sensitizers.' },
-      { term: 'parfum', db: 'EWG Skin Deep', badge: 'EWG High Allergen', level: 'y', reason: 'Undisclosed fragrance blend posing sensitization and contact dermatitis risks.' },
-      { term: 'synthetic fragrance', db: 'EWG Skin Deep', badge: 'EWG High Hazard', level: 'y', reason: 'Unspecified chemical mixture masked under proprietary fragrance labeling.' },
-      { term: 'methylisothiazolinone', db: 'EWG Skin Deep', badge: 'EWG Severe Allergen', level: 'r', reason: 'Potent sensitizing preservative linked to severe contact dermatitis and skin allergies.' },
-      { term: 'triclocarban', db: 'FDA / EWG', badge: 'FDA Banned Ingredient', level: 'r', reason: 'Prohibited antimicrobial compound linked to endocrine disruption.' },
-      { term: 'lilial', db: 'EWG / EU SCCS', badge: 'Banned Toxic to Repro', level: 'r', reason: 'Butylphenyl Methylpropional: Fragrance chemical banned in EU/UK due to reproductive toxicity.' }
+      { name: 'paraben', source: 'EWG / FDA Review', tag: 'ewg', risk: 'High', desc: 'Endocrine disruptor linked to hormone mimicry and breast tissue accumulation.' },
+      { name: 'methylparaben', source: 'EWG / FDA Review', tag: 'ewg', risk: 'High', desc: 'Preservative flagged for estrogenic activity and UV skin damage sensitivity.' },
+      { name: 'propylparaben', source: 'FDA Review / EWG', tag: 'fda', risk: 'High', desc: 'Under FDA review for reproductive & endocrine toxicity.' },
+      { name: 'butylparaben', source: 'EWG / EU REACH', tag: 'ewg', risk: 'High', desc: 'Restricted in cosmetics due to potent hormone mimicry concerns.' },
+      { name: 'sulfate', source: 'EWG Cosmetic', tag: 'ewg', risk: 'Moderate', desc: 'Harsh surfactant that strips natural lipids, irritating skin and hair follicles.' },
+      { name: 'sodium lauryl sulfate', source: 'EWG / CSPI', tag: 'ewg', risk: 'Moderate', desc: 'SLS causes severe skin/eye irritation and protein denaturation.' },
+      { name: 'sls', source: 'EWG / CSPI', tag: 'ewg', risk: 'Moderate', desc: 'Abbreviation for Sodium Lauryl Sulfate; strong irritant.' },
+      { name: 'sodium laureth sulfate', source: 'EWG / CSPI', tag: 'ewg', risk: 'Moderate', desc: 'SLES risk of 1,4-dioxane contamination during ethoxylation.' },
+      { name: 'sles', source: 'EWG / CSPI', tag: 'ewg', risk: 'Moderate', desc: 'Abbreviation for Sodium Laureth Sulfate.' },
+      { name: 'phthalate', source: 'Health Canada / EWG', tag: 'canada', risk: 'High', desc: 'Banned/Restricted adulterant linked to reproductive toxicity and asthma.' },
+      { name: 'oxybenzone', source: 'EWG / FDA Review', tag: 'ewg', risk: 'High', desc: 'Chemical sunscreen filter causing systemic absorption, endocrine disruption & coral bleaching.' },
+      { name: 'benzophenone', source: 'IARC Group 2B / EWG', tag: 'iarc', risk: 'High', desc: 'IARC Group 2B possible human carcinogen used as UV stabilizer.' },
+      { name: 'triclosan', source: 'FDA Banned / EWG', tag: 'fda', risk: 'High', desc: 'Banned in hand washes by FDA due to thyroid disruption and antibiotic resistance.' },
+      { name: 'fragrance', source: 'EWG High Hazard', tag: 'ewg', risk: 'Moderate', desc: 'Undisclosed chemical mix often containing hidden phthalates & neurotoxins.' },
+      { name: 'parfum', source: 'EWG High Hazard', tag: 'ewg', risk: 'Moderate', desc: 'European label term for undisclosed fragrance chemical blends.' },
+      { name: 'titanium dioxide', source: 'IARC Group 2B / EU Ban', tag: 'iarc', risk: 'High', desc: 'IARC Group 2B possible carcinogen; banned as food additive E171 in EU due to DNA damage concerns.' },
+      { name: 'potassium bromate', source: 'CSPI Avoid / Health Canada', tag: 'cspi', risk: 'High', desc: 'Carcinogenic dough conditioner banned in Canada, EU, and UK.' },
+      { name: 'brominated vegetable oil', source: 'FDA Ban / CSPI', tag: 'fda', risk: 'High', desc: 'BVO banned by FDA due to bioaccumulation and neural organ toxicity.' },
+      { name: 'bvo', source: 'FDA Ban / CSPI', tag: 'fda', risk: 'High', desc: 'Abbreviation for Brominated Vegetable Oil.' },
+      { name: 'sodium nitrite', source: 'CSPI Caution / IARC', tag: 'cspi', risk: 'High', desc: 'Cured meat preservative forming carcinogenic nitrosamines during cooking.' },
+      { name: 'tbhq', source: 'CSPI Cut Back / EWG', tag: 'cspi', risk: 'Moderate', desc: 'Synthetic antioxidant linked to immune cell alteration and liver toxicity.' },
+      { name: 'bha', source: 'IARC Group 2B / FDA Review', tag: 'iarc', risk: 'High', desc: 'Butylated Hydroxyanisole; IARC Group 2B possible carcinogen & endocrine disruptor.' },
+      { name: 'bht', source: 'CSPI Cut Back / EWG', tag: 'cspi', risk: 'Moderate', desc: 'Butylated Hydroxytoluene; synthetic preservative linked to hormone disruption.' },
+      { name: 'red 3', source: 'CSPI Avoid / FDA Review', tag: 'cspi', risk: 'High', desc: 'Erythrosine; food dye shown to induce thyroid tumors in animal studies.' },
+      { name: 'erythrosine', source: 'CSPI Avoid / FDA Review', tag: 'cspi', risk: 'High', desc: 'Chemical name for Red No. 3 synthetic dye.' },
+      { name: 'aspartame', source: 'IARC Group 2B / WHO', tag: 'iarc', risk: 'Moderate', desc: 'IARC Group 2B possibly carcinogenic artificial sweetener.' },
+      { name: 'lead', source: 'Health Canada / FDA', tag: 'canada', risk: 'High', desc: 'Toxic heavy metal contaminant subject to strict Canadian maximum residue limits.' },
+      { name: 'arsenic', source: 'IARC Group 1 / Health Canada', tag: 'iarc', risk: 'High', desc: 'IARC Group 1 proven human carcinogen contaminant in rice and juices.' }
     ];
 
-    function initWatchlist() {
-      const saved = localStorage.getItem('cleanscan_chems');
+    const defaultChems = safetyDatabaseRegistry.map(item => item.name);
+
+    let flaggedChems = [...defaultChems];
+
+        function initWatchlist() {
+      const saved = localStorage.getItem('cleanscan_chems_v10');
       if (saved) {
-        try { flaggedChems = JSON.parse(saved); } catch (e) { flaggedChems = [...defaultChems]; }
+        try { flaggedChems = JSON.parse(saved); } catch (e) {}
       }
       renderWatchlist();
     }
@@ -428,11 +381,34 @@
     function renderWatchlist() {
       $('chemCount').innerText = flaggedChems.length;
       const container = $('chemTags');
+      const filterTerm = ($('dbSearchInput')?.value || '').trim().toLowerCase();
       container.innerHTML = '';
-      flaggedChems.forEach((chem, idx) => {
+
+      flaggedChems.forEach((chemName, idx) => {
+        if (filterTerm && !chemName.toLowerCase().includes(filterTerm)) return;
+
+        const info = safetyDatabaseRegistry.find(x => x.name.toLowerCase() === chemName.toLowerCase()) || { source: 'Custom', tag: 'ewg', desc: 'User flagged ingredient.' };
+        const tagClass = 'db-' + info.tag;
+
         const tag = document.createElement('div');
         tag.className = 'chem-tag';
-        tag.innerHTML = '<span>' + esc(chem) + '</span><button type="button" onclick="removeChem(' + idx + ')">✕</button>';
+        tag.style.flexDirection = 'column';
+        tag.style.alignItems = 'flex-start';
+        tag.style.padding = '8px 12px';
+        tag.style.borderRadius = '10px';
+        tag.style.background = '#f9f9f9';
+        tag.style.border = '1px solid #e0e0e0';
+
+        tag.innerHTML = `
+          <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+            <strong>${esc(chemName)}</strong>
+            <button type="button" onclick="removeChem(${idx})" style="color:#999; font-size:14px; margin-left:8px;">✕</button>
+          </div>
+          <div style="margin-top:4px;">
+            <span class="db-badge ${tagClass}">${esc(info.source)}</span>
+            <small style="color:#555;">${esc(info.desc)}</small>
+          </div>
+        `;
         container.appendChild(tag);
       });
     }
@@ -441,7 +417,7 @@
       const val = $('newChemInput').value.trim().toLowerCase();
       if (val && !flaggedChems.includes(val)) {
         flaggedChems.push(val);
-        localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+        localStorage.setItem('cleanscan_chems_v10', JSON.stringify(flaggedChems));
         renderWatchlist();
         $('newChemInput').value = '';
       }
@@ -449,26 +425,15 @@
 
     function removeChem(idx) {
       flaggedChems.splice(idx, 1);
-      localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+      localStorage.setItem('cleanscan_chems_v10', JSON.stringify(flaggedChems));
       renderWatchlist();
     }
 
     function resetWatchlist() {
-      flaggedChems = [...defaultChems];
-      localStorage.setItem('cleanscan_chems', JSON.stringify(flaggedChems));
+      flaggedChems = safetyDatabaseRegistry.map(item => item.name);
+      localStorage.setItem('cleanscan_chems_v10', JSON.stringify(flaggedChems));
+      if ($('dbSearchInput')) $('dbSearchInput').value = '';
       renderWatchlist();
-    }
-
-    function toggleWatchlist() {
-      const body = $('watchBody');
-      const arrow = $('watchArrow');
-      if (body.style.display === 'none') {
-        body.style.display = 'block';
-        arrow.innerText = '▲';
-      } else {
-        body.style.display = 'none';
-        arrow.innerText = '▼';
-      }
     }
 
     function status(msg, kind) {
@@ -532,111 +497,9 @@
       fetchBarcodeData(barcode);
     }
 
-        async function fetchBarcodeData(barcode) {
+    async function fetchBarcodeData(barcode) {
       const cleanCode = barcode.replace(/[^0-9]/g, '');
       if (!cleanCode) { status("Please enter a valid numeric barcode.", "err"); return; }
-
-      status("Searching online product databases...");
-      $('preview').style.display = 'none';
-
-      const candidates = [cleanCode];
-      if (cleanCode.length === 12) candidates.push('0' + cleanCode);
-      else if (cleanCode.length === 13 && cleanCode.startsWith('0')) candidates.push(cleanCode.substring(1));
-
-      // Primary Open DBs
-      const databases = [
-        { name: 'Open Beauty Facts', host: 'world.openbeautyfacts.org' },
-        { name: 'Open Food Facts', host: 'world.openfoodfacts.org' },
-        { name: 'Open Products Facts', host: 'world.openproductsfacts.org' }
-      ];
-
-      for (const db of databases) {
-        for (const code of candidates) {
-          try {
-            status('Checking ' + db.name + ' (' + code + ')...');
-            const res = await fetch('https://' + db.host + '/api/v0/product/' + code + '.json');
-            const data = await res.json();
-
-            if (data && data.status === 1 && data.product) {
-              const product = data.product;
-              const name = product.product_name || product.product_name_en || 'Scanned Product (' + code + ')';
-              const brand = product.brands || 'Unknown Brand';
-              const ingredients = product.ingredients_text || product.ingredients_text_en || product.ingredients_text_with_allergens || '';
-              
-              const localData = { name, brand, ingredients, sourceName: db.name };
-              if (getKey()) {
-                runAiAnalysis({ text: `Product Name: ${name}
-Brand: ${brand}
-Barcode: ${code}
-Ingredients: ${ingredients}`, localData });
-              } else {
-                renderLocalAnalysis(name, brand, ingredients, db.name);
-              }
-              return;
-            }
-          } catch (err) { console.warn('Database check error:', err); }
-        }
-      }
-
-      // Secondary Online Fallback: UPCItemDB Trial API
-      for (const code of candidates) {
-        try {
-          status('Checking online UPC catalog for ' + code + '...');
-          const res = await fetch('https://api.upcitemdb.com/prod/trial/lookup?upc=' + code);
-          const data = await res.json();
-          if (data && data.items && data.items.length > 0) {
-            const item = data.items[0];
-            const name = item.title || 'Scanned Product';
-            const brand = item.brand || 'Personal Care';
-            const description = item.description || '';
-            
-            const localData = { name, brand, ingredients: description, sourceName: 'Online UPC Database' };
-            if (getKey()) {
-              runAiAnalysis({ text: `Product Title: ${name}
-Brand: ${brand}
-Description: ${description}`, localData });
-            } else {
-              renderLocalAnalysis(name, brand, description, 'Online UPC Database');
-            }
-            return;
-          }
-        } catch (err) { console.warn('UPCItemDB error:', err); }
-      }
-
-      // Tertiary Online Search: Query Open Beauty & Open Food Facts Search API by Code
-      try {
-        status('Querying online search index...');
-        const searchRes = await fetch('https://' + 'world.openbeautyfacts.org' + '/cgi/search.pl?search_terms=' + cleanCode + '&search_simple=1&action=process&json=1');
-        const searchData = await searchRes.json();
-        if (searchData && searchData.products && searchData.products.length > 0) {
-          const product = searchData.products[0];
-          const name = product.product_name || 'Scanned Product';
-          const brand = product.brands || 'Unknown Brand';
-          const ingredients = product.ingredients_text || '';
-          
-          const localData = { name, brand, ingredients, sourceName: 'Open Beauty Index' };
-          if (getKey()) {
-            runAiAnalysis({ text: `Product Name: ${name}
-Brand: ${brand}
-Ingredients: ${ingredients}`, localData });
-          } else {
-            renderLocalAnalysis(name, brand, ingredients, 'Open Beauty Index');
-          }
-          return;
-        }
-      } catch (err) {}
-
-      // Final fallback if barcode not found anywhere
-      const localData = { name: "UPC Barcode " + cleanCode, brand: "Scanned Item", ingredients: "", sourceName: "Online Search Fallback" };
-      if (getKey()) {
-        status("Barcode not in open databases. Requesting AI web lookup for UPC " + cleanCode + "...");
-        runAiAnalysis({ text: "Look up product info and ingredients for UPC barcode: " + cleanCode, localData });
-      } else {
-        const contribUrl = 'https://' + 'world.openbeautyfacts.org' + '/cgi/product.pl?type=add&code=' + cleanCode;
-        renderLocalAnalysis("Barcode " + cleanCode + " (Not in DB yet)", "Scanned Item", "", "Open Database Lookup");
-        status('Barcode <strong>' + cleanCode + '</strong> was not found in open databases.<br><br>💡 You can <a href="' + contribUrl + '" target="_blank" style="color:#0B3D2E; font-weight:bold; text-decoration:underline;">click here to add this product to Open Beauty Facts</a> or paste its ingredients below for instant scan!', "err");
-      }
-    }
 
       status("Searching Open Beauty Facts & Open Food Facts...");
       $('preview').style.display = 'none';
@@ -705,8 +568,8 @@ Ingredients: ${ingredients}`, localData });
       }
     }
 
-    // Local Analysis (Multi-Database Scan Engine: EWG, CSPI, IARC, Health Canada, FDA)
-    function renderLocalAnalysis(pName, pBrand, ingredientsText, sourceName, extraNotice = "") {
+    // Local Analysis (No API key needed / AI error fallback)
+        function renderLocalAnalysis(pName, pBrand, ingredientsText, sourceName, extraNotice = "") {
       status("");
       const glutenTriggers = ['wheat', 'barley', 'rye', 'malt', 'gluten', 'spelt', 'kamut', 'triticale', 'durum', 'semolina'];
       const ingLower = (ingredientsText || '').toLowerCase();
@@ -714,41 +577,27 @@ Ingredients: ${ingredients}`, localData });
       let containsGluten = false;
       let detectedGluten = [];
       glutenTriggers.forEach(trigger => {
-        const regex = new RegExp('\\b' + trigger + '\\b', 'i');
+        const regex = new RegExp('\b' + trigger + '\b', 'i');
         if (regex.test(ingLower)) {
           containsGluten = true;
           if (!detectedGluten.includes(trigger)) detectedGluten.push(trigger);
         }
       });
 
-      // Scan against Curated Safety Database Registry (EWG, CSPI, IARC, Health Canada, FDA)
-      let matchedRegistry = [];
-      let registryMatchedTerms = [];
+      let foundChems = [];
       if (ingredientsText) {
-        safetyDatabaseRegistry.forEach(item => {
-          const regex = new RegExp('\\b' + item.term + '\\b', 'i');
+        flaggedChems.forEach(chemName => {
+          const regex = new RegExp('\b' + chemName, 'i');
           if (regex.test(ingLower)) {
-            matchedRegistry.push(item);
-            registryMatchedTerms.push(item.term);
+            const info = safetyDatabaseRegistry.find(x => x.name.toLowerCase() === chemName.toLowerCase()) || { source: 'Watchlist', risk: 'High', desc: 'Flagged toxic chemical.' };
+            foundChems.push({ name: chemName, ...info });
           }
         });
       }
 
-      // Scan against User Custom Watchlist
-      let customChemsFound = [];
-      if (ingredientsText) {
-        flaggedChems.forEach(chem => {
-          if (!registryMatchedTerms.includes(chem)) {
-            const regex = new RegExp('\\b' + chem + '\\b', 'i');
-            if (regex.test(ingLower)) customChemsFound.push(chem);
-          }
-        });
-      }
-
-      let score = 90;
+      let score = 85;
       if (containsGluten) score -= 30;
-      matchedRegistry.forEach(item => { score -= (item.level === 'r' ? 12 : 6); });
-      score -= (customChemsFound.length * 8);
+      score -= (foundChems.length * 10);
       score = Math.max(10, Math.min(100, score));
 
       const tColor = tone(score);
@@ -756,56 +605,32 @@ Ingredients: ${ingredients}`, localData });
       const gsBannerTitle = containsGluten ? "⚠️ CONTAINS GLUTEN" : (ingredientsText ? "✅ NO GLUTEN FOUND" : "❓ GLUTEN STATUS UNKNOWN");
       const gsBannerDesc = containsGluten ? "Flagged gluten triggers: " + detectedGluten.join(', ') : (ingredientsText ? "No wheat, barley, rye, or malt detected in ingredient text." : "Ingredient list missing from database entry.");
 
-      let flagsHtml = "";
-      if (matchedRegistry.length > 0) {
-        flagsHtml += matchedRegistry.map(m => `
-          <div class="item" style="border-color:var(--${m.level});">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-              <b>🚫 ${esc(m.term.toUpperCase())}</b>
-              <span class="source-badge" style="background:${m.level==='r'?'#fde0dd':'#ffefc2'}; color:${m.level==='r'?'#b3261e':'#8a5a00'};">${esc(m.badge)}</span>
-            </div>
-            <div style="margin-top:4px; font-size:13px; color:#333;">
-              <strong>Database: ${esc(m.db)}</strong> — ${esc(m.reason)}
-            </div>
-          </div>
-        `).join('');
-      }
-
-      if (customChemsFound.length > 0) {
-        flagsHtml += customChemsFound.map(c => `
-          <div class="item" style="border-color:var(--r);">
-            <b>🚫 ${esc(c)} (Custom Watchlist Flag)</b><br>Detected in ingredient list scan against custom user watchlist.
-          </div>
-        `).join('');
-      }
-
-      if (!flagsHtml) {
-        flagsHtml = `<div class="item" style="border-color:var(--g);"><b>🌿 Clean Scan</b><br>No flagged chemicals or hazards detected across EWG, CSPI, IARC, or FDA watchlists.</div>`;
-      }
+      let flagsHtml = foundChems.map(f => {
+        const tagClass = 'db-' + (f.tag || 'ewg');
+        return `<div class="item" style="border-color:var(--r);"><b>🚫 ${esc(f.name)} (${esc(f.risk || 'High')} Risk)</b> <span class="db-badge ${tagClass}">${esc(f.source || 'Watchlist')}</span><br>${esc(f.desc || 'Flagged chemical.')}</div>`;
+      }).join('');
+      
+      if (!flagsHtml) flagsHtml = `<div class="item" style="border-color:var(--g);"><b>🌿 Clean Scan</b><br>No watchlist chemicals or hazards detected against 5 safety databases.</div>`;
 
       let highlighted = esc(ingredientsText || "No ingredient text available in database entry.");
       glutenTriggers.forEach(t => {
-        const r = new RegExp('\\b(' + t + ')\\b', 'gi');
+        const r = new RegExp('\b(' + t + ')\b', 'gi');
         highlighted = highlighted.replace(r, '<span class="highlight-gluten">$1</span>');
       });
-      safetyDatabaseRegistry.forEach(m => {
-        const r = new RegExp('\\b(' + m.term + ')\\b', 'gi');
-        highlighted = highlighted.replace(r, '<span class="highlight-chem">$1</span>');
-      });
       flaggedChems.forEach(c => {
-        const r = new RegExp('\\b(' + c + ')\\b', 'gi');
+        const r = new RegExp('\b(' + c + ')\b', 'gi');
         highlighted = highlighted.replace(r, '<span class="highlight-chem">$1</span>');
       });
 
       $('results').innerHTML = `
         ${extraNotice ? `<div class="item" style="border-color:var(--y); background:var(--ybg); margin-bottom:12px;"><b>ℹ️ Note:</b> ${esc(extraNotice)}</div>` : ''}
         <div class="pname">${esc(pName)}</div>
-        <div class="pbrand">Brand: ${esc(pBrand)} • Source: ${esc(sourceName)}</div>
+        <div class="pbrand">Brand: ${esc(pBrand)} • Database: ${esc(sourceName)}</div>
         <div class="score-container">
           <div class="dial tone-${tColor}">${score}</div>
           <div class="score-text">
             <strong>Safety Rating: ${score}/100</strong><br>
-            Scanned against CFIA allergens & chemical watchlists.
+            Cross-referenced with CFIA Allergens, EWG, FooDB, CSPI & IARC Standards.
           </div>
         </div>
         <div class="banner ${gsBannerClass}">
@@ -820,17 +645,17 @@ Ingredients: ${ingredients}`, localData });
     }
 
     // AI Analysis (Gemini / OpenRouter) with Graceful Local Fallback on Error
-    const SYS = `You are a toxicologist, nutritionist, and celiac/gluten-free specialist evaluating ingredients against Canadian CFIA allergen standards, EWG Food Scores & Skin Deep, CSPI Chemical Cuisine, IARC Monograph carcinogenicity groups (1, 2A, 2B), Health Canada Contaminants list, and FDA Select Chemicals under review. Analyze the product label, ingredients, or UPC barcode provided. Return ONLY valid JSON:
+    const SYS = `You are a toxicologist, nutritionist, and celiac/gluten-free specialist (following Canadian CFIA allergen standards). Analyze the product label, ingredients, or UPC barcode provided. Return ONLY valid JSON:
 {"product_name":"Name","brand":"Brand","score":75,"score_summary":"1-sentence verdict","gluten_status":"NO GLUTEN FOUND"|"WARNING"|"CONTAINS GLUTEN","gluten_details":"Gluten & cross-contamination check","flagged_ingredients":[{"name":"Ingredient","risk":"High"|"Moderate","reason":"1-sentence harm explanation"}],"label_fact_check":"Verify front-of-pack marketing claims","store_swaps":["Cleaner store brand 1","Cleaner store brand 2"],"diy_recipe":{"title":"DIY Alternative","steps":"Practical homemade recipe"}}`;
 
-        async function runAiAnalysis({ text = "", img = "", localData = null }) {
+    async function runAiAnalysis({ text = "", img = "", localData = null }) {
       const key = getKey();
       if (!key) {
         if (localData && localData.name) {
           renderLocalAnalysis(localData.name, localData.brand, localData.ingredients, localData.sourceName);
         } else {
           $('openSettings').click();
-          status("Paste your API key in Settings first, or use barcode search for instant scan.", "err");
+          status("Paste your API key in Settings first, or use barcode search for instant offline scan.", "err");
         }
         return;
       }
@@ -841,10 +666,7 @@ Ingredients: ${ingredients}`, localData });
       try {
         let raw = "";
         if (key.startsWith("sk-or-")) {
-          const content = [{ type: "text", text: SYS + "
-
-Product Input:
-" + text }];
+          const content = [{ type: "text", text: SYS + "\n\nProduct Input:\n" + text }];
           if (img) content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } });
 
           const orModels = [
@@ -856,6 +678,8 @@ Product Input:
           ];
 
           const url_or = 'https://' + 'openrouter.ai' + '/api/v1/chat/completions';
+          let lastOrError = null;
+
           for (const orModel of orModels) {
             try {
               const res = await fetch(url_or, {
@@ -864,100 +688,117 @@ Product Input:
                 body: JSON.stringify({ model: orModel, messages: [{ role: "user", content }] })
               });
               const d = await res.json();
-              if (d && d.choices && d.choices[0] && d.choices[0].message) {
-                raw = d.choices[0].message.content || "";
-                if (raw) break;
+              if (d.error) {
+                lastOrError = new Error(d.error.message);
+                continue;
               }
-            } catch (e) {}
+              raw = d.choices?.at(0)?.message?.content || "";
+              if (raw) break;
+            } catch (e) {
+              lastOrError = e;
+            }
           }
+          if (!raw && lastOrError) throw lastOrError;
         } else {
           const parts = [{ text: text || "Analyze this product label image." }];
           if (img) parts.push({ inlineData: { mimeType: "image/jpeg", data: img } });
 
           const geminiModels = [
-            'gemini-1.5-flash',
-            'gemini-2.0-flash-exp',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
             'gemini-1.5-flash-latest',
-            'gemini-1.5-pro',
-            'gemini-1.0-pro'
+            'gemini-1.5-flash-002',
+            'gemini-1.5-flash'
           ];
-          const apiVersions = ['v1beta', 'v1'];
+
+          let lastError = null;
+          let success = false;
 
           for (const modelName of geminiModels) {
-            for (const ver of apiVersions) {
-              try {
-                const url_g = 'https://' + 'generativelanguage.googleapis.com' + '/' + ver + '/models/' + modelName + ':generateContent?key=' + key;
-                const res = await fetch(url_g, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    systemInstruction: { parts: [{ text: SYS }] },
-                    contents: [{ parts }],
-                    generationConfig: { responseMimeType: "application/json" }
-                  })
-                });
-                const d = await res.json();
-                if (d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) {
-                  raw = d.candidates[0].content.parts.map(p => p.text || "").join("");
-                  if (raw) break;
+            try {
+              const url_g = 'https://' + 'generativelanguage.googleapis.com' + '/v1beta/models/' + modelName + ':generateContent?key=' + key;
+              const res = await fetch(url_g, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  systemInstruction: { parts: [{ text: SYS }] },
+                  contents: [{ parts }],
+                  generationConfig: { responseMimeType: "application/json" }
+                })
+              });
+              const d = await res.json();
+              if (d.error) {
+                lastError = new Error(d.error.message || ("API Error (" + modelName + ")"));
+                if (d.error.code === 404 || (d.error.message && (d.error.message.includes("not found") || d.error.message.includes("not supported")))) {
+                  continue;
                 }
-              } catch (err) {}
+                throw lastError;
+              }
+              raw = d.candidates?.at(0)?.content?.parts?.map(p => p.text || "").join("") || "";
+              if (raw) {
+                success = true;
+                break;
+              }
+            } catch (err) {
+              lastError = err;
+              if (err.message && (err.message.includes("not found") || err.message.includes("not supported"))) {
+                continue;
+              }
+              throw err;
             }
-            if (raw) break;
+          }
+
+          if (!success && lastError) {
+            throw lastError;
           }
         }
 
-        if (raw) {
-          const r = JSON.parse(raw.replace(/```json|```/g, "").trim());
-          status("");
+        const r = JSON.parse(raw.replace(/```json|```/g, "").trim());
+        status("");
 
-          const s = Number(r.score) || 0;
-          const gs = String(r.gluten_status || "").toUpperCase();
-          const gt = gs.includes("NO GLUTEN") ? "g" : gs === "WARNING" ? "y" : "r";
+        const s = Number(r.score) || 0;
+        const gs = String(r.gluten_status || "").toUpperCase();
+        const gt = gs.includes("NO GLUTEN") ? "g" : gs === "WARNING" ? "y" : "r";
 
-          const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(--${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
-          const swaps = (r.store_swaps || []).map(x => `<li>${esc(x)}</li>`).join("");
+        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(--${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
+        const swaps = (r.store_swaps || []).map(x => `<li>${esc(x)}</li>`).join("");
 
-          let diyHtml = "";
-          if (r.diy_recipe && r.diy_recipe.title) {
-            diyHtml = `<div class="item" style="border-color:var(--lime); background:#f9fdf5; margin-top:14px;">
-              <b style="color:var(--brand);">🌱 DIY Alternative: ${esc(r.diy_recipe.title)}</b><br>${esc(r.diy_recipe.steps)}
-            </div>`;
-          }
-
-          $('results').innerHTML = `
-            <div class="pname">${esc(r.product_name || "Product Scan")}</div>
-            <div class="pbrand">${esc(r.brand || "AI Analysis")}</div>
-            <div class="score-container">
-              <div class="dial tone-${tone(s)}">${s}</div>
-              <div class="score-text">
-                <strong>${esc(r.score_summary || "")}</strong>
-              </div>
-            </div>
-            <div class="banner banner-${gt}">
-              <h3>${esc(r.gluten_status)}</h3>
-              <p>${esc(r.gluten_details)}</p>
-            </div>
-            ${flags ? `<h4 style="margin:16px 0 6px;">⚠️ Flagged Ingredients</h4>${flags}` : ''}
-            ${r.label_fact_check ? `<div class="item" style="border-color:var(--brand);"><b>🔍 Front-of-Pack Fact Check</b><br>${esc(r.label_fact_check)}</div>` : ''}
-            ${swaps ? `<div class="item" style="border-color:var(--g);"><b>🌿 Cleaner Store Swaps</b><ul>${swaps}</ul></div>` : ''}
-            ${diyHtml}
-          `;
-          return;
+        let diyHtml = "";
+        if (r.diy_recipe && r.diy_recipe.title) {
+          diyHtml = `<div class="item" style="border-color:var(--lime); background:#f9fdf5; margin-top:14px;">
+            <b style="color:var(--brand);">🌱 DIY Alternative: ${esc(r.diy_recipe.title)}</b><br>${esc(r.diy_recipe.steps)}
+          </div>`;
         }
+
+        $('results').innerHTML = `
+          <div class="pname">${esc(r.product_name || "Product Scan")}</div>
+          <div class="pbrand">${esc(r.brand || "AI Analysis")}</div>
+          <div class="score-container">
+            <div class="dial tone-${tone(s)}">${s}</div>
+            <div class="score-text">
+              <strong>${esc(r.score_summary || "")}</strong>
+            </div>
+          </div>
+          <div class="banner banner-${gt}">
+            <h3>${esc(r.gluten_status)}</h3>
+            <p>${esc(r.gluten_details)}</p>
+          </div>
+          ${flags ? `<h4 style="margin:16px 0 6px;">⚠️ Flagged Ingredients</h4>${flags}` : ''}
+          ${r.label_fact_check ? `<div class="item" style="border-color:var(--brand);"><b>🔍 Front-of-Pack Fact Check</b><br>${esc(r.label_fact_check)}</div>` : ''}
+          ${swaps ? `<div class="item" style="border-color:var(--g);"><b>🌿 Cleaner Store Swaps</b><ul>${swaps}</ul></div>` : ''}
+          ${diyHtml}
+        `;
       } catch (err) {
-        console.warn("AI Analysis exception:", err);
-      }
-
-      // Safe Fallback if AI call returns empty or fails
-      if (localData && localData.name) {
-        renderLocalAnalysis(localData.name, localData.brand, localData.ingredients, localData.sourceName, "AI model endpoint offline. Showing instant local ingredient scan.");
-      } else {
-        renderLocalAnalysis("Scanned Ingredients", "Analysis Result", text, "Local Scan Engine", "AI model endpoint offline. Showing instant local ingredient scan.");
+        console.warn("AI Analysis Error:", err);
+        if (localData && localData.name) {
+          renderLocalAnalysis(localData.name, localData.brand, localData.ingredients, localData.sourceName, "AI key error (" + err.message + "). Displaying instant offline scan instead.");
+        } else {
+          status("AI Analysis Error: " + err.message + "<br><small>Tip: Barcode lookups work without AI!</small>", "err");
+        }
       }
     }
 
-        // Camera Barcode Scanner Modal (Rear Camera Only, Refocus & Light/Flashlight)
+    // Camera Barcode Scanner Modal (Rear Camera Only & Hardware Auto-Focus & Light)
     let html5QrCode = null;
     let isScanning = false;
     let torchOn = false;
@@ -981,7 +822,7 @@ Product Input:
       const select = $('cameraSelect');
       const cameraId = select.value || null;
 
-      // Lock strictly to rear camera (facingMode: environment)
+      // Strictly lock to rear camera (facingMode: environment)
       let cameraConfig;
       if (cameraId) {
         cameraConfig = { deviceId: { exact: cameraId } };
@@ -998,39 +839,30 @@ Product Input:
         aspectRatio: 1.777778,
         videoConstraints: {
           facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          focusMode: "continuous"
+          focusMode: "continuous",
+          advanced: [{ focusMode: "continuous" }]
         }
       };
 
       html5QrCode.start(cameraConfig, qrConfig, onScanSuccess, () => {})
         .then(() => {
           isScanning = true;
-          triggerRefocus();
+          try {
+            const track = html5QrCode.getRunningTrack();
+            if (track && track.applyConstraints) {
+              track.applyConstraints({
+                advanced: [{ focusMode: "continuous" }]
+              }).catch(() => {});
+            }
+          } catch (e) {}
           populateCameraDropdown();
         })
         .catch(err => {
-          console.warn("Camera start failed, trying environment fallback:", err);
+          console.warn("Camera start failed, trying simple environment fallback:", err);
           html5QrCode.start({ facingMode: "environment" }, qrConfig, onScanSuccess, () => {})
             .then(() => { isScanning = true; populateCameraDropdown(); })
             .catch(e => console.error("Final camera error:", e));
         });
-    }
-
-    function triggerRefocus() {
-      if (!html5QrCode || !isScanning) return;
-      try {
-        const track = html5QrCode.getRunningTrack();
-        if (track && track.applyConstraints) {
-          track.applyConstraints({
-            advanced: [{ focusMode: "continuous" }]
-          }).then(() => {
-            status("Camera focused", "ok");
-            setTimeout(() => status(""), 1200);
-          }).catch(() => {});
-        }
-      } catch (e) {}
     }
 
     async function populateCameraDropdown() {
@@ -1042,9 +874,9 @@ Product Input:
           select.innerHTML = '<option value="">Auto Rear Camera (Environment)</option>';
           devices.forEach((d, idx) => {
             const labelLower = (d.label || '').toLowerCase();
-            // FILTER OUT FRONT / SELFIE / FACETIME CAMERAS COMPLETELY
+            // FILTER OUT FRONT / SELFIE / FACETIME CAMERAS
             if (labelLower.includes('front') || labelLower.includes('user') || labelLower.includes('selfie') || labelLower.includes('facetime')) {
-              return;
+              return; // Skip front cameras completely
             }
             const opt = document.createElement('option');
             opt.value = d.id;
@@ -1063,40 +895,46 @@ Product Input:
       }
     }
 
-    function toggleTorch() {
+        function toggleTorch() {
       if (!html5QrCode || !isScanning) return;
       torchOn = !torchOn;
-      const torchBtn = $('torchBtn');
+      const readerBox = $('reader-container');
 
       try {
         const track = html5QrCode.getRunningTrack();
-        if (track && track.getCapabilities) {
-          const caps = track.getCapabilities();
-          if (caps.torch) {
-            track.applyConstraints({ advanced: [{ torch: torchOn }] })
-              .then(() => {
-                torchBtn.innerText = torchOn ? '🔦 Light Off' : '🔦 Light On';
-                return;
-              })
-              .catch(() => enableScreenTorch(torchOn));
-            return;
+        if (track && track.applyConstraints) {
+          track.applyConstraints({ advanced: [{ torch: torchOn }] })
+            .then(() => {
+              $('torchBtn').innerText = torchOn ? '🔦 Light / Flashlight Off' : '🔦 Light / Flashlight On';
+              if (torchOn) readerBox.classList.add('screen-torch-active');
+              else readerBox.classList.remove('screen-torch-active');
+            })
+            .catch(() => {
+              if (torchOn) {
+                readerBox.classList.add('screen-torch-active');
+                $('torchBtn').innerText = '💡 Screen Light On';
+              } else {
+                readerBox.classList.remove('screen-torch-active');
+                $('torchBtn').innerText = '🔦 Light / Flashlight On';
+              }
+            });
+        } else {
+          if (torchOn) {
+            readerBox.classList.add('screen-torch-active');
+            $('torchBtn').innerText = '💡 Screen Light On';
+          } else {
+            readerBox.classList.remove('screen-torch-active');
+            $('torchBtn').innerText = '🔦 Light / Flashlight On';
           }
         }
-      } catch (e) {}
-
-      // Fallback for iOS / devices without WebRTC torch access: Screen Light Overlay
-      enableScreenTorch(torchOn);
-    }
-
-    function enableScreenTorch(on) {
-      const container = $('reader-container');
-      const torchBtn = $('torchBtn');
-      if (on) {
-        container.classList.add('screen-torch-active');
-        torchBtn.innerText = '🔦 Screen Light Off';
-      } else {
-        container.classList.remove('screen-torch-active');
-        torchBtn.innerText = '🔦 Light / Flashlight On';
+      } catch (e) {
+        if (torchOn) {
+          readerBox.classList.add('screen-torch-active');
+          $('torchBtn').innerText = '💡 Screen Light On';
+        } else {
+          readerBox.classList.remove('screen-torch-active');
+          $('torchBtn').innerText = '🔦 Light / Flashlight On';
+        }
       }
     }
 
@@ -1108,84 +946,12 @@ Product Input:
 
     function closeCameraModal() {
       if (html5QrCode && isScanning) {
-        enableScreenTorch(false);
         html5QrCode.stop().then(() => { isScanning = false; }).catch(() => {});
       }
       $('scannerDialog').close();
-    }).catch(() => {});
-      }
-      $('scannerDialog').close();
     }
 
-
-    // Safety Databases Reference Index UI logic
-    function toggleDbIndex() {
-      const body = $('dbIndexBody');
-      const arrow = $('dbIndexArrow');
-      if (body.style.display === 'none') {
-        body.style.display = 'block';
-        arrow.innerText = '▲';
-        renderDbIndex('ALL', '');
-      } else {
-        body.style.display = 'none';
-        arrow.innerText = '▼';
-      }
-    }
-
-    let currentDbTagFilter = 'ALL';
-
-    function filterDbTag(tag) {
-      currentDbTagFilter = tag;
-      const searchVal = ($('dbSearchInput') ? $('dbSearchInput').value : '').trim().toLowerCase();
-      renderDbIndex(tag, searchVal);
-    }
-
-    function filterDbIndex() {
-      const searchVal = $('dbSearchInput').value.trim().toLowerCase();
-      renderDbIndex(currentDbTagFilter, searchVal);
-    }
-
-    function renderDbIndex(tagFilter, searchQuery) {
-      const container = $('dbRegistryList');
-      if (!container) return;
-      container.innerHTML = '';
-
-      const filtered = safetyDatabaseRegistry.filter(item => {
-        const matchesQuery = !searchQuery || item.term.includes(searchQuery) || item.db.toLowerCase().includes(searchQuery) || item.reason.toLowerCase().includes(searchQuery);
-        if (!matchesQuery) return false;
-
-        if (tagFilter === 'ALL') return true;
-        if (tagFilter === 'IARC' && (item.db.includes('IARC') || item.badge.includes('IARC'))) return true;
-        if (tagFilter === 'CSPI' && (item.db.includes('CSPI') || item.db.includes('FooDB'))) return true;
-        if (tagFilter === 'FDA' && (item.db.includes('Health Canada') || item.db.includes('FDA'))) return true;
-        if (tagFilter === 'EWG' && item.db.includes('EWG')) return true;
-        return false;
-      });
-
-      if (filtered.length === 0) {
-        container.innerHTML = '<p class="hint">No matching ingredient entries found in safety registry index.</p>';
-        return;
-      }
-
-      filtered.forEach(item => {
-        const row = document.createElement('div');
-        row.className = 'item';
-        row.style.borderColor = `var(--${item.level})`;
-        row.style.marginBottom = '8px';
-        row.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
-            <strong style="color:var(--brand); text-transform:uppercase;">${esc(item.term)}</strong>
-            <span class="source-badge" style="background:${item.level==='r'?'#fde0dd':'#ffefc2'}; color:${item.level==='r'?'#b3261e':'#8a5a00'};">${esc(item.badge)}</span>
-          </div>
-          <div style="font-size:12px; margin-top:4px; color:#444;">
-            <strong>${esc(item.db)}</strong> — ${esc(item.reason)}
-          </div>
-        `;
-        container.appendChild(row);
-      });
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
       initWatchlist();
     });
   </script>
