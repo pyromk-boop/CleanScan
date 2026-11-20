@@ -585,32 +585,89 @@
           const content = [{ type: "text", text: SYS + "\n\nProduct Input:\n" + text }];
           if (img) content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${img}` } });
 
+          const orModels = [
+            "google/gemini-2.5-flash",
+            "google/gemini-2.0-flash-001",
+            "google/gemini-1.5-flash",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "openrouter/auto"
+          ];
+
           const url_or = 'https://' + 'openrouter.ai' + '/api/v1/chat/completions';
-          const res = await fetch(url_or, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "openrouter/free", messages: [{ role: "user", content }] })
-          });
-          const d = await res.json();
-          if (d.error) throw new Error(d.error.message);
-          raw = d.choices?.at(0)?.message?.content || "";
+          let lastOrError = null;
+
+          for (const orModel of orModels) {
+            try {
+              const res = await fetch(url_or, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ model: orModel, messages: [{ role: "user", content }] })
+              });
+              const d = await res.json();
+              if (d.error) {
+                lastOrError = new Error(d.error.message);
+                continue;
+              }
+              raw = d.choices?.at(0)?.message?.content || "";
+              if (raw) break;
+            } catch (e) {
+              lastOrError = e;
+            }
+          }
+          if (!raw && lastOrError) throw lastOrError;
         } else {
           const parts = [{ text: text || "Analyze this product label image." }];
           if (img) parts.push({ inlineData: { mimeType: "image/jpeg", data: img } });
 
-          const url_g = 'https://' + 'generativelanguage.googleapis.com' + '/v1beta/models/gemini-1.5-flash:generateContent?key=' + key;
-          const res = await fetch(url_g, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              systemInstruction: { parts: [{ text: SYS }] },
-              contents: [{ parts }],
-              generationConfig: { responseMimeType: "application/json" }
-            })
-          });
-          const d = await res.json();
-          if (d.error) throw new Error(d.error.message);
-          raw = d.candidates?.at(0)?.content?.parts?.map(p => p.text || "").join("") || "";
+          // Model fallback array for Google AI Studio API
+          const geminiModels = [
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash-latest',
+            'gemini-1.5-flash-002',
+            'gemini-1.5-flash'
+          ];
+
+          let lastError = null;
+          let success = false;
+
+          for (const modelName of geminiModels) {
+            try {
+              const url_g = 'https://' + 'generativelanguage.googleapis.com' + '/v1beta/models/' + modelName + ':generateContent?key=' + key;
+              const res = await fetch(url_g, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  systemInstruction: { parts: [{ text: SYS }] },
+                  contents: [{ parts }],
+                  generationConfig: { responseMimeType: "application/json" }
+                })
+              });
+              const d = await res.json();
+              if (d.error) {
+                lastError = new Error(d.error.message || ("API Error (" + modelName + ")"));
+                if (d.error.code === 404 || (d.error.message && (d.error.message.includes("not found") || d.error.message.includes("not supported")))) {
+                  continue;
+                }
+                throw lastError;
+              }
+              raw = d.candidates?.at(0)?.content?.parts?.map(p => p.text || "").join("") || "";
+              if (raw) {
+                success = true;
+                break;
+              }
+            } catch (err) {
+              lastError = err;
+              if (err.message && (err.message.includes("not found") || err.message.includes("not supported"))) {
+                continue;
+              }
+              throw err;
+            }
+          }
+
+          if (!success && lastError) {
+            throw lastError;
+          }
         }
 
         const r = JSON.parse(raw.replace(/```json|```/g, "").trim());
@@ -620,7 +677,7 @@
         const gs = String(r.gluten_status || "").toUpperCase();
         const gt = gs.includes("NO GLUTEN") ? "g" : gs === "WARNING" ? "y" : "r";
 
-        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(--${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
+        const flags = (r.flagged_ingredients || []).map(f => `<div class="item" style="border-color:var(${f.risk==="High"?"r":"y"})"><b>${esc(f.name)} (${esc(f.risk)})</b><br>${esc(f.reason)}</div>`).join("");
         const swaps = (r.store_swaps || []).map(x => `<li>${esc(x)}</li>`).join("");
 
         let diyHtml = "";
